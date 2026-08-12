@@ -1,0 +1,127 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}مقارنة الأحياء - عقار ذكي الرياض{% endblock %}
+{% block meta_description %}قارن بين أحياء الرياض من حيث الأسعار والخدمات والبنية التحتية باستخدام رسوم بيانية تفاعلية{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div style="padding-top:var(--navbar-height)">
+<div class="container section-sm">
+
+  <!-- Header -->
+  <div class="section-header" data-reveal>
+    <h1>📊 مقارنة الأحياء</h1>
+    <div class="divider"></div>
+    <p>اختر حيين أو أكثر لمقارنة مستوى الخدمات والأسعار وجودة البنية التحتية</p>
+  </div>
+
+  <!-- Select Controls -->
+  <div class="compare-controls" data-reveal>
+    <h3 style="margin-bottom:1.25rem;font-size:1rem;color:var(--color-text-secondary)">
+      <i class="fas fa-sliders-h" style="color:var(--color-accent-primary)"></i>
+      اختر الأحياء للمقارنة (2 إلى 4 أحياء)
+    </h3>
+    <div class="compare-select-grid">
+      {% for i in range(4) %}
+      <div class="form-group">
+        <label>الحي {{ ['الأول','الثاني','الثالث','الرابع'][i] }}</label>
+        <select class="form-control compare-select" id="select-{{ i }}">
+          <option value="">-- اختر حياً --</option>
+          {% for n in neighborhoods %}
+          <option value="{{ n.id }}">{{ n.name_ar }} ({{ n.name_en }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endfor %}
+    </div>
+    <div style="display:flex;gap:1rem;margin-top:1.5rem;flex-wrap:wrap">
+      <button id="compare-btn" class="btn btn-primary btn-lg btn-interactive">
+        <i class="fas fa-chart-bar"></i> عرض المقارنة
+      </button>
+      <button onclick="quickCompare()" class="btn btn-ghost btn-lg btn-interactive">
+        <i class="fas fa-bolt"></i> مقارنة سريعة (أفضل 3 أحياء)
+      </button>
+    </div>
+  </div>
+
+  <!-- Results Cards -->
+  <div class="compare-results" id="compare-results" data-reveal>
+    <div class="empty-state" style="grid-column:1/-1;padding:3rem">
+      <i class="fas fa-chart-bar"></i>
+      <h3>ابدأ المقارنة</h3>
+      <p>اختر حيين أو أكثر من القائمة أعلاه ثم اضغط "عرض المقارنة"</p>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div id="charts-section" style="display:none;margin-top:2rem">
+    <div class="grid" style="grid-template-columns:1fr 1fr;gap:1.5rem">
+      <div class="chart-container" data-reveal>
+        <h3 style="font-size:1rem;margin-bottom:1rem">
+          <i class="fas fa-chart-line" style="color:var(--color-accent-primary)"></i>
+          تطور سعر المتر المربع (ريال)
+        </h3>
+        <canvas id="price-chart"></canvas>
+      </div>
+      <div class="chart-container" data-reveal data-reveal-delay="1">
+        <h3 style="font-size:1rem;margin-bottom:1rem">
+          <i class="fas fa-th-large" style="color:var(--color-accent-secondary)"></i>
+          مقارنة الخدمات والمرافق
+        </h3>
+        <canvas id="infra-chart"></canvas>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function quickCompare() {
+  const topIds = {{ neighborhoods[:3] | map(attribute='id') | list | tojson }};
+  const selects = document.querySelectorAll('.compare-select');
+  topIds.forEach((id, i) => {
+    if (selects[i]) selects[i].value = id;
+  });
+  runCompare();
+}
+
+// Override runCompare to show charts section
+const originalRunCompare = window.runCompare;
+async function runCompare() {
+  const selects = document.querySelectorAll('.compare-select');
+  const ids = [...selects].map(s => s.value).filter(Boolean);
+
+  if (ids.length < 2) {
+    if (typeof showToast === 'function') showToast('يرجى اختيار حيين على الأقل للمقارنة', 'error');
+    return;
+  }
+
+  const resultsEl = document.getElementById('compare-results');
+  if (resultsEl) {
+    resultsEl.innerHTML = '<div class="skeleton skeleton-card" style="height:280px"></div>'.repeat(ids.length);
+  }
+
+  try {
+    const params = ids.map(id => `ids=${id}`).join('&');
+    const res = await fetch(`/api/neighborhoods/compare?${params}`);
+    const data = await res.json();
+
+    if (data.success) {
+      renderCompareCards(data.data);
+      const chartsSection = document.getElementById('charts-section');
+      if (chartsSection) chartsSection.style.display = 'block';
+    }
+  } catch (err) {
+    console.error('Compare error:', err);
+  }
+}
+
+document.getElementById('compare-btn')?.addEventListener('click', runCompare);
+</script>
+{% endblock %}

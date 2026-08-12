@@ -1,0 +1,244 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}الإحصائيات والمؤشرات - عقار ذكي الرياض{% endblock %}
+{% block meta_description %}مؤشرات السوق العقاري في الرياض: تطور الأسعار، حجم العرض والطلب، والبيانات التاريخية{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="bg-pattern" style="padding-top:var(--navbar-height); padding-bottom:4rem;">
+<div class="container section-sm">
+
+  <!-- Header -->
+  <div class="section-header text-center" data-reveal>
+    <div class="badge badge-info" style="margin:0 auto 1rem; display:inline-block;">تحديث دوري</div>
+    <h1 class="text-gold">📈 الإحصائيات والمؤشرات العقارية</h1>
+    <div class="divider mx-auto"></div>
+    <p>تحليل تفصيلي لبيانات السوق العقاري في الرياض واتجاهات العرض والطلب.</p>
+  </div>
+
+  <!-- Stats Overview -->
+  <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 3rem;" data-reveal>
+    <div class="card p-4 text-center">
+      <h3 class="text-gold font-latin mb-2">+45%</h3>
+      <p class="text-secondary text-sm">نمو حجم المعروض (5 سنوات)</p>
+    </div>
+    <div class="card p-4 text-center">
+      <h3 class="text-success font-latin mb-2">+12%</h3>
+      <p class="text-secondary text-sm">متوسط نمو أسعار الأراضي سنوياً</p>
+    </div>
+    <div class="card p-4 text-center">
+      <h3 class="text-gold font-latin mb-2">1,200+</h3>
+      <p class="text-secondary text-sm">عقار متاح للبيع هذا الشهر</p>
+    </div>
+    <div class="card p-4 text-center">
+      <h3 class="text-info font-latin mb-2">8.5%</h3>
+      <p class="text-secondary text-sm">أعلى عائد إيجاري (حي الملقا)</p>
+    </div>
+  </div>
+
+  <!-- Detailed Charts Row 1 -->
+  <div class="grid gap-3" style="grid-template-columns: 1fr 1fr; margin-bottom:1.5rem;">
+    <!-- Supply & Demand Chart -->
+    <div class="card p-4 chart-container" data-reveal>
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-md"><i class="fas fa-chart-area text-gold ms-2"></i> حجم العرض والطلب</h3>
+        <span class="badge badge-light text-xs">آخر 5 سنوات</span>
+      </div>
+      <div style="height:300px; position:relative;">
+        <canvas id="supplyDemandChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Price Trend Chart -->
+    <div class="card p-4 chart-container" data-reveal data-reveal-delay="1">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-md"><i class="fas fa-chart-line text-success ms-2"></i> متوسط سعر المتر (أراضي)</h3>
+        <span class="badge badge-light text-xs">بالريال السعودي</span>
+      </div>
+      <div style="height:300px; position:relative;">
+        <canvas id="priceTrendChart"></canvas>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Detailed Charts Row 2 -->
+  <div class="grid gap-3" style="grid-template-columns: 1fr 1fr 1fr; margin-bottom:2rem;">
+    
+    <!-- Property Types Doughnut -->
+    <div class="card p-4 chart-container" data-reveal>
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-md"><i class="fas fa-home text-gold ms-2"></i> توزيع العقارات</h3>
+      </div>
+      <div style="height:250px; position:relative;">
+        <canvas id="propTypesChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Rent vs Sale Pie -->
+    <div class="card p-4 chart-container" data-reveal>
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-md"><i class="fas fa-exchange-alt text-gold ms-2"></i> الإيجار مقابل البيع</h3>
+      </div>
+      <div style="height:250px; position:relative;">
+        <canvas id="rentVsSaleChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Top ROI Neighborhoods Bar -->
+    <div class="card p-4 chart-container" data-reveal>
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-md"><i class="fas fa-star text-gold ms-2"></i> أعلى الأحياء عائداً (ROI)</h3>
+      </div>
+      <div style="height:250px; position:relative;">
+        <canvas id="roiChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="card p-4 flex justify-between items-center" data-reveal>
+    <div class="flex items-center gap-3">
+      <div class="icon-box bg-success-light text-success" style="width:40px;height:40px;border-radius:10px;display:grid;place-items:center;font-size:1.2rem; background:rgba(16,185,129,0.2);">
+        <i class="fas fa-sync-alt"></i>
+      </div>
+      <div>
+        <h4 class="text-sm font-bold m-0">تحديث دوري</h4>
+        <p class="text-xs text-muted m-0">يتم تحديث البيانات بانتظام لضمان دقة المؤشرات العقارية المعروضة.</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+window.addEventListener('load', function() {
+  const years = {{ years|tojson }};
+  const supplyTrend = {{ supply_trend|tojson }};
+  const demandTrend = {{ demand_trend|tojson }};
+  const priceTrend = {{ avg_price_trend|tojson }};
+  
+  const propTypesLabels = {{ prop_types_labels|tojson }};
+  const propTypesData = {{ prop_types_data|tojson }};
+  
+  const rentVsSaleLabels = {{ rent_vs_sale_labels|tojson }};
+  const rentVsSaleData = {{ rent_vs_sale_data|tojson }};
+  
+  const topRoiLabels = {{ top_roi_labels|tojson }};
+  const topRoiData = {{ top_roi_data|tojson }};
+  
+  const fontFam = 'Tajawal, sans-serif';
+  const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+  const gridColor = isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)';
+  const tickColor = isLight ? '#3b5998' : '#94a3b8';
+  const labelColor = isLight ? '#111' : '#fff';
+  const goldColor = isLight ? '#3b5998' : '#c9a84c'; // Use matte blue instead of gold for light mode
+
+  // 1. Supply & Demand Chart
+  new Chart(document.getElementById('supplyDemandChart').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: years,
+      datasets: [
+        { label: 'العروض العقارية', data: supplyTrend, backgroundColor: goldColor, borderRadius: 4 },
+        { label: 'الطلب المستدام', data: demandTrend, backgroundColor: '#3b82f6', borderRadius: 4 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: labelColor, font: { family: fontFam } } } },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: tickColor, font: { family: fontFam } } },
+        y: { grid: { color: gridColor }, ticks: { color: tickColor, font: { family: 'Inter, sans-serif' } } }
+      }
+    }
+  });
+
+  // 2. Price Trend Chart
+  const ctxPrice = document.getElementById('priceTrendChart').getContext('2d');
+  const gradient = ctxPrice.createLinearGradient(0, 0, 0, 300);
+  gradient.addColorStop(0, 'rgba(16, 185, 129, 0.3)');
+  gradient.addColorStop(1, 'rgba(16, 185, 129, 0)');
+  new Chart(ctxPrice, {
+    type: 'line',
+    data: {
+      labels: years,
+      datasets: [{
+        label: 'متوسط السعر (ريال/م²)', data: priceTrend, borderColor: '#10b981', backgroundColor: gradient,
+        borderWidth: 3, tension: 0.4, fill: true, pointBackgroundColor: '#fff', pointBorderWidth: 2, pointRadius: 4
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: tickColor, font: { family: fontFam } } },
+        y: { grid: { color: gridColor }, ticks: { color: tickColor, font: { family: 'Inter, sans-serif' } } }
+      }
+    }
+  });
+  
+  // 3. Property Types Doughnut
+  new Chart(document.getElementById('propTypesChart').getContext('2d'), {
+    type: 'doughnut',
+    data: {
+      labels: propTypesLabels,
+      datasets: [{
+        data: propTypesData,
+        backgroundColor: [goldColor, '#3b82f6', '#10b981', '#ef4444'],
+        borderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { color: labelColor, font: { family: fontFam } } } },
+      cutout: '70%'
+    }
+  });
+  
+  // 4. Rent vs Sale Pie
+  new Chart(document.getElementById('rentVsSaleChart').getContext('2d'), {
+    type: 'pie',
+    data: {
+      labels: rentVsSaleLabels,
+      datasets: [{
+        data: rentVsSaleData,
+        backgroundColor: ['#3b82f6', goldColor],
+        borderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { color: labelColor, font: { family: fontFam } } } }
+    }
+  });
+  
+  // 5. Top ROI Bar
+  new Chart(document.getElementById('roiChart').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: topRoiLabels,
+      datasets: [{
+        label: 'العائد الإيجاري (%)',
+        data: topRoiData,
+        backgroundColor: '#10b981',
+        borderRadius: 4
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      indexAxis: 'y',
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: gridColor }, ticks: { color: tickColor, font: { family: 'Inter, sans-serif' } } },
+        y: { grid: { display: false }, ticks: { color: tickColor, font: { family: fontFam } } }
+      }
+    }
+  });
+});
+</script>
+{% endblock %}

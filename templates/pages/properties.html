@@ -1,0 +1,138 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}العقارات - عقار ذكي الرياض{% endblock %}
+{% block meta_description %}تصفح جميع العقارات المتاحة للبيع والإيجار في أحياء الرياض مع إمكانية التصفية والبحث المتقدم{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-top: calc(var(--navbar-height) + 2rem); padding-bottom: 3rem;">
+
+  <!-- Header -->
+  <div class="section-header" data-reveal>
+    <h1>🏠 العقارات المتاحة</h1>
+    <div class="divider"></div>
+    <p>
+      {{ pagination.total }} عقار متاح
+      {% if filters.listing %}· <span class="text-gold">{{ 'للبيع' if filters.listing == 'sale' else 'للإيجار' }}</span>{% endif %}
+      {% if filters.type %}· <span class="text-gold">{{ {'villa':'فيلا','apartment':'شقة','land':'أرض','commercial':'تجاري'}.get(filters.type, filters.type) }}</span>{% endif %}
+    </p>
+  </div>
+
+  <!-- Filters -->
+  <form method="GET" action="{{ url_for('pages.properties') }}">
+    <div class="filters-bar" data-reveal>
+      <div class="form-group">
+        <label><i class="fas fa-home" style="color:var(--color-accent-primary)"></i> نوع العقار</label>
+        <select name="type" class="form-control">
+          <option value="">الكل</option>
+          {% for val, label in [('villa','فيلا'),('apartment','شقة'),('land','أرض'),('commercial','تجاري')] %}
+          <option value="{{ val }}" {{ 'selected' if filters.type == val }}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label><i class="fas fa-key" style="color:var(--color-accent-primary)"></i> نوع العرض</label>
+        <select name="listing" class="form-control">
+          <option value="">الكل</option>
+          <option value="sale" {{ 'selected' if filters.listing == 'sale' }}>للبيع</option>
+          <option value="rent" {{ 'selected' if filters.listing == 'rent' }}>للإيجار</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label><i class="fas fa-map-marker-alt" style="color:var(--color-accent-primary)"></i> الحي</label>
+        <select name="neighborhood" class="form-control">
+          <option value="">كل الأحياء</option>
+          {% for n in neighborhoods %}
+          <option value="{{ n.id }}" {{ 'selected' if filters.neighborhood|string == n.id|string }}>{{ n.name_ar }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="btn btn-primary btn-interactive">
+        <i class="fas fa-search"></i> تصفية
+      </button>
+      <a href="{{ url_for('pages.properties') }}" class="btn btn-ghost btn-interactive">
+        <i class="fas fa-times"></i> إعادة
+      </a>
+    </div>
+  </form>
+
+  <!-- Properties Grid -->
+  {% if pagination.items %}
+  <div class="properties-grid">
+    {% for prop in pagination.items %}
+    <div class="property-card card-lift" data-reveal data-reveal-delay="{{ loop.index % 4 }}">
+      <div class="property-img">
+        <img src="{{ prop.image_url or 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=600' }}"
+          alt="{{ prop.title }}" loading="lazy" width="600" height="400"
+          onerror="this.src='https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=600'">
+        <span class="badge {{ 'badge-sale' if prop.listing_type == 'sale' else 'badge-rent' }}">
+          {{ 'للبيع' if prop.listing_type == 'sale' else 'للإيجار' }}
+        </span>
+        {% if prop.is_featured %}
+        <span class="badge badge-featured" style="top:1rem;left:1rem">⭐ مميز</span>
+        {% endif %}
+        <div class="badge" style="bottom:0.75rem;right:0.75rem;top:auto;background:rgba(0,0,0,0.6);color:#f8fafc;font-size:0.7rem">
+          {{ {'villa':'🏠 فيلا','apartment':'🏢 شقة','land':'🗺️ أرض','commercial':'🏪 تجاري'}.get(prop.property_type, prop.property_type) }}
+        </div>
+      </div>
+      <div class="property-info">
+        <h3 class="property-title">{{ prop.title }}</h3>
+        <div class="property-price">{{ prop.price_formatted() }}</div>
+        {% if prop.area_sqm and prop.price_per_sqm() %}
+        <p style="font-size:0.78rem;color:var(--color-text-muted);margin-bottom:0.5rem">
+          {{ "{:,.0f}".format(prop.price_per_sqm()) }} ريال/م²
+        </p>
+        {% endif %}
+        <div class="property-meta">
+          {% if prop.bedrooms %}<span><i class="fas fa-bed" aria-hidden="true"></i> {{ prop.bedrooms }} غرف</span>{% endif %}
+          {% if prop.bathrooms %}<span><i class="fas fa-bath" aria-hidden="true"></i> {{ prop.bathrooms }} حمام</span>{% endif %}
+          {% if prop.area_sqm %}<span><i class="fas fa-ruler-combined" aria-hidden="true"></i> {{ prop.area_sqm }} م²</span>{% endif %}
+        </div>
+        {% if prop.neighborhood %}
+        <p style="font-size:0.8rem;color:var(--color-text-secondary);margin-top:0.5rem">
+          <i class="fas fa-map-marker-alt" style="color:var(--color-accent-primary)"></i> {{ prop.neighborhood.name_ar }}
+        </p>
+        {% endif %}
+        <div style="display:flex;gap:0.5rem;margin-top:0.75rem">
+          <a href="{{ url_for('pages.map_view') }}" class="btn btn-secondary btn-sm btn-interactive" style="flex:1;justify-content:center">
+            <i class="fas fa-map"></i> على الخريطة
+          </a>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Pagination -->
+  {% if pagination.pages > 1 %}
+  <div class="pagination" data-reveal>
+    {% if pagination.has_prev %}
+    <a href="{{ url_for('pages.properties', page=pagination.prev_num, **filters) }}" class="page-link">
+      <i class="fas fa-chevron-right"></i>
+    </a>
+    {% endif %}
+    {% for page_num in pagination.iter_pages(left_edge=2, right_edge=2, left_current=2, right_current=2) %}
+    {% if page_num %}
+    <a href="{{ url_for('pages.properties', page=page_num, **filters) }}"
+      class="page-link {{ 'active' if page_num == pagination.page }}">{{ page_num }}</a>
+    {% else %}
+    <span class="page-link" style="cursor:default;color:var(--color-text-muted)">...</span>
+    {% endif %}
+    {% endfor %}
+    {% if pagination.has_next %}
+    <a href="{{ url_for('pages.properties', page=pagination.next_num, **filters) }}" class="page-link">
+      <i class="fas fa-chevron-left"></i>
+    </a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="empty-state" data-reveal>
+    <i class="fas fa-home"></i>
+    <h3>لا توجد عقارات بهذه المعايير</h3>
+    <p>جرب تغيير معايير البحث أو <a href="{{ url_for('pages.properties') }}" class="text-gold">عرض كل العقارات</a></p>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#111111">
+  <meta name="description" content="{% block meta_description %}منصة العقار الذكية - الرياض: تحليل بيانات السوق العقاري بالذكاء الاصطناعي والخرائط التفاعلية{% endblock %}">
+  <title>{% block title %}منصة العقار الذكي - الرياض{% endblock %}</title>
+
+  <!-- Open Graph / Social Media -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="{% block og_title %}منصة العقار الذكي - الرياض{% endblock %}">
+  <meta property="og:description" content="منصة عقارية متقدمة لتحليل سوق العقارات في الرياض">
+  <meta property="og:locale" content="ar_SA">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <!-- Preload critical fonts -->
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;800&display=swap" as="style">
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+  <!-- Leaflet CSS (only on map page) -->
+  {% block map_css %}{% endblock %}
+
+  <!-- Main CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+<!-- Noscript Fallback -->
+<noscript>
+  <div style="background:#d4a942;color:#050505;padding:1rem;text-align:center;font-family:'Tajawal',sans-serif;font-weight:700;position:fixed;top:0;left:0;right:0;z-index:99999">
+    ⚠️ يرجى تفعيل JavaScript لتجربة كاملة على منصة العقار الذكي
+  </div>
+</noscript>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay">
+  <div style="text-align:center">
+    <div class="loader-ring"></div>
+    <p style="color:var(--color-accent-primary);margin-top:1rem;font-weight:600">جاري التحميل...</p>
+  </div>
+</div>
+
+<!-- Navbar -->
+<nav class="navbar" id="navbar">
+  <div class="navbar-inner">
+    <a href="{{ url_for('pages.index') }}" class="navbar-brand">
+      <div class="brand-icon">🏢</div>
+      <div class="brand-text">عقار<span>ذكي</span></div>
+    </a>
+
+    <ul class="navbar-nav" id="nav-links">
+      <li><a href="{{ url_for('pages.index') }}" class="nav-link"><i class="fas fa-home"></i> <span class="lang-text" data-ar="الرئيسية" data-en="Home">الرئيسية</span></a></li>
+      <li><a href="{{ url_for('pages.map_view') }}" class="nav-link"><i class="fas fa-map"></i> <span class="lang-text" data-ar="الخريطة" data-en="Map">الخريطة</span></a></li>
+      <li><a href="{{ url_for('pages.properties') }}" class="nav-link"><i class="fas fa-building"></i> <span class="lang-text" data-ar="العقارات" data-en="Properties">العقارات</span></a></li>
+      <li><a href="{{ url_for('pages.compare') }}" class="nav-link"><i class="fas fa-chart-bar"></i> <span class="lang-text" data-ar="المقارنة" data-en="Compare">المقارنة</span></a></li>
+      <li><a href="{{ url_for('pages.statistics') }}" class="nav-link"><i class="fas fa-chart-pie"></i> <span class="lang-text" data-ar="الإحصائيات" data-en="Statistics">الإحصائيات</span></a></li>
+      <li><a href="{{ url_for('pages.developers') }}" class="nav-link"><i class="fas fa-hard-hat"></i> <span class="lang-text" data-ar="المطورون" data-en="Developers">المطورون</span></a></li>
+    </ul>
+
+    <div class="navbar-actions">
+      <button class="btn btn-ghost btn-sm theme-toggle-pill" id="themeToggle" type="button" title="تغيير المظهر" aria-label="تغيير المظهر">
+        <i class="fas fa-sun"></i>
+        <span class="toggle-label" data-ar="ليلي" data-en="Day">ليلي</span>
+      </button>
+      <button class="btn btn-ghost btn-sm lang-toggle-pill" id="langToggle" type="button" title="تغيير اللغة" aria-label="تغيير اللغة">
+        <i class="fas fa-globe"></i>
+        <span id="langLabel">EN</span>
+      </button>
+      <a href="{{ url_for('pages.map_view') }}" class="btn btn-primary btn-sm btn-interactive"><i class="fas fa-map-marked-alt"></i> <span class="lang-text" data-ar="الخريطة" data-en="Map">الخريطة</span></a>
+    </div>
+    
+    <button class="menu-toggle" id="menu-toggle" aria-label="القائمة">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<!-- Flash Messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="flash-messages container" style="padding-top:5rem">
+      {% for category, message in messages %}
+        <div class="flash flash-{{ category }}">
+          <i class="fas fa-{{ 'check-circle' if category == 'success' else 'exclamation-circle' }}"></i>
+          {{ message }}
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+<!-- Main Content -->
+<main>
+  {% block content %}{% endblock %}
+</main>
+
+<!-- Back to Top Button -->
+<button id="back-to-top" class="back-to-top-btn" aria-label="العودة للأعلى" title="العودة للأعلى">
+  <i class="fas fa-chevron-up"></i>
+</button>
+
+<!-- Footer -->
+{% block footer %}
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <h3>🏢 عقار<span class="text-gold">ذكي</span></h3>
+        <p>منصة عقارية أكاديمية متقدمة لتحليل سوق العقارات في مدينة الرياض باستخدام الذكاء الاصطناعي والخرائط التفاعلية.</p>
+        <div class="social-links" style="margin-top:1rem">
+          <a href="#" class="social-link" data-tooltip="تويتر"><i class="fab fa-twitter"></i></a>
+          <a href="#" class="social-link" data-tooltip="لينكدإن"><i class="fab fa-linkedin"></i></a>
+          <a href="#" class="social-link" data-tooltip="جيثب"><i class="fab fa-github"></i></a>
+        </div>
+      </div>
+
+      <div>
+        <h4 class="footer-title">الصفحات</h4>
+        <ul class="footer-links">
+          <li><a href="{{ url_for('pages.index') }}"><i class="fas fa-chevron-left fa-xs" style="margin-left:4px"></i> الرئيسية</a></li>
+          <li><a href="{{ url_for('pages.map_view') }}"><i class="fas fa-chevron-left fa-xs" style="margin-left:4px"></i> الخريطة التفاعلية</a></li>
+          <li><a href="{{ url_for('pages.properties') }}"><i class="fas fa-chevron-left fa-xs" style="margin-left:4px"></i> العقارات</a></li>
+          <li><a href="{{ url_for('pages.compare') }}"><i class="fas fa-chevron-left fa-xs" style="margin-left:4px"></i> مقارنة الأحياء</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h4 class="footer-title">المصادر</h4>
+        <ul class="footer-links">
+          <li><a href="#"><i class="fas fa-chevron-left fa-xs" style="margin-left:4px"></i> شبكة إيجار</a></li>
+          <li><a href="#"><i class="fas fa-chevron-left fa-xs" style="margin-left:4px"></i> برنامج وافي</a></li>
+          <li><a href="#"><i class="fas fa-chevron-left fa-xs" style="margin-left:4px"></i> OpenStreetMap</a></li>
+          <li><a href="{{ url_for('pages.admin_login') }}" style="color:var(--color-text-muted)"><i class="fas fa-lock fa-xs" style="margin-left:4px"></i> الإدارة</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h4 class="footer-title">تواصل معنا</h4>
+        <ul class="footer-links">
+          <li style="color:var(--color-text-secondary);font-size:0.9rem"><i class="fas fa-map-marker-alt" style="color:var(--color-accent-primary);margin-left:6px"></i> الرياض، المملكة العربية السعودية</li>
+          <li style="color:var(--color-text-secondary);font-size:0.9rem;margin-top:0.5rem"><i class="fas fa-envelope" style="color:var(--color-accent-primary);margin-left:6px"></i> info@aqar-dhaki.sa</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <div class="disclaimer" style="flex:1;margin-bottom:0;margin-left:2rem;text-align:right;">
+        <i class="fas fa-sync-alt" style="color:var(--color-accent-primary);"></i>
+        <strong>تحديث يومي:</strong> يتم تحديث البيانات العقارية بشكل دوري.
+        <span style="margin: 0 10px;">|</span>
+        <i class="fas fa-exclamation-triangle"></i>
+        هذا المشروع <strong>أكاديمي/تجريبي فقط</strong> - ليس للاستخدام التجاري.
+      </div>
+      <p>© {{ now().year }} منصة العقار الذكي | الرياض 🇸🇦</p>
+    </div>
+  </div>
+</footer>
+{% endblock %}
+
+<!-- Scripts -->
+<script src="{{ url_for('static', filename='js/interactions.js') }}" defer></script>
+{% block map_scripts %}{% endblock %}
+<script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+{% block extra_scripts %}{% endblock %}
+
+</body>
+</html>

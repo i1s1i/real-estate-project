@@ -1,0 +1,183 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}المطورون العقاريون - عقار ذكي الرياض{% endblock %}
+{% block meta_description %}دليل المطورين العقاريين الموثقين ببرنامج وافي في الرياض مع تقييماتهم ومشاريعهم{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div style="padding-top:var(--navbar-height)">
+<div class="container section-sm">
+
+  <!-- Header -->
+  <div class="section-header" data-reveal>
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:1rem">
+      <div>
+        <h1>🏗️ المطورون العقاريون</h1>
+        <div class="divider"></div>
+        <p>مطورون معتمدون من برنامج <strong class="text-gold">وافي</strong> مع بياناتهم وتقييماتهم</p>
+      </div>
+      <div class="tag tag-green">
+        <i class="fas fa-shield-alt"></i> {{ developers|length }} مطور موثق
+      </div>
+    </div>
+  </div>
+
+  <!-- Disclaimer -->
+  <div class="disclaimer" data-reveal>
+    <i class="fas fa-exclamation-triangle"></i>
+    البيانات لأغراض أكاديمية فقط. تحقق دائماً من الموقع الرسمي لبرنامج <strong>وافي</strong> قبل التعاقد مع أي مطور.
+  </div>
+
+  <!-- Market Share Chart -->
+  <div style="display:grid;grid-template-columns:1fr 320px;gap:1.5rem;margin-bottom:2.5rem;align-items:start">
+    <div class="chart-container" data-reveal style="height:280px">
+      <h3 style="font-size:1rem;margin-bottom:1rem">
+        <i class="fas fa-chart-pie" style="color:var(--color-accent-primary)"></i>
+        حصة كل مطور في السوق
+      </h3>
+      <canvas id="market-chart"></canvas>
+    </div>
+    <div class="card" style="padding:1.5rem" data-reveal data-reveal-delay="1">
+      <h4 style="margin-bottom:1rem;font-size:0.95rem">📊 ملخص السوق</h4>
+      {% for dev in developers[:5] %}
+      <div class="market-bar-container">
+        <div class="market-bar-label">
+          <span>{{ dev.name_ar.split()[0] }}</span>
+          <span class="text-gold">{{ dev.market_share_pct }}%</span>
+        </div>
+        <div class="market-bar">
+          <div class="market-bar-fill" data-width="{{ dev.market_share_pct }}" style="width:0"></div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Developers Grid -->
+  <div class="developers-grid">
+    {% for dev in developers %}
+    <div class="developer-card card-lift" data-reveal data-reveal-delay="{{ loop.index % 3 }}">
+      {% if dev.is_wafi_certified %}
+      <div class="wafi-badge"><i class="fas fa-check-circle"></i> موثق وافي</div>
+      {% endif %}
+
+      <div class="developer-header">
+        <div class="developer-logo">
+          {{ dev.name_ar[0] }}
+        </div>
+        <div>
+          <div class="developer-name">{{ dev.name_ar }}</div>
+          <div style="font-size:0.78rem;color:var(--color-text-muted)">{{ dev.name_en or '' }}</div>
+          <div class="developer-rating">
+            {% for i in range(5) %}
+            <i class="fas fa-star{% if i >= dev.rating|int %}-half-alt{% endif %}"
+              style="font-size:0.75rem;color:{{ '#c9a84c' if i < dev.rating else '#334155' }}"></i>
+            {% endfor %}
+            <span style="color:var(--color-text-secondary);font-family:var(--font-latin)">{{ dev.rating }}</span>
+          </div>
+        </div>
+      </div>
+
+      {% if dev.description %}
+      <p style="font-size:0.85rem;color:var(--color-text-secondary);line-height:1.6;margin-bottom:1rem">
+        {{ dev.description[:120] }}{% if dev.description|length > 120 %}...{% endif %}
+      </p>
+      {% endif %}
+
+      <div class="developer-stats">
+        <div class="dev-stat">
+          <div class="value">{{ dev.total_projects }}</div>
+          <div class="label">إجمالي المشاريع</div>
+        </div>
+        <div class="dev-stat">
+          <div class="value" style="color:var(--color-accent-secondary)">{{ dev.delivered_projects }}</div>
+          <div class="label">مُسلَّم</div>
+        </div>
+        <div class="dev-stat">
+          <div class="value" style="color:var(--color-accent-info)">{{ dev.active_projects }}</div>
+          <div class="label">نشط</div>
+        </div>
+      </div>
+
+      <div class="market-bar-container" style="margin-top:1rem">
+        <div class="market-bar-label">
+          <span style="font-size:0.78rem">الحصة السوقية</span>
+          <span class="text-gold" style="font-size:0.78rem">{{ dev.market_share_pct }}%</span>
+        </div>
+        <div class="market-bar">
+          <div class="market-bar-fill" data-width="{{ dev.market_share_pct }}" style="width:0"></div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:0.5rem;margin-top:1.25rem">
+        {% if dev.license_number %}
+        <div class="tag tag-gold" style="font-size:0.7rem">
+          <i class="fas fa-id-card"></i> {{ dev.license_number }}
+        </div>
+        {% endif %}
+        {% if dev.established_year %}
+        <div class="tag tag-green" style="font-size:0.7rem">
+          <i class="fas fa-calendar"></i> منذ {{ dev.established_year }}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+</div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Market Share Doughnut Chart
+window.addEventListener('load', function() {
+  const ctx = document.getElementById('market-chart');
+  if (!ctx) return;
+
+  const labels = {{ developers | map(attribute='name_ar') | map('truncate', 12, true, '...') | list | tojson }};
+  const data   = {{ developers | map(attribute='market_share_pct') | list | tojson }};
+  const colors = ['#c9a84c','#10b981','#3b82f6','#f97316','#a78bfa','#f43f5e','#06b6d4'];
+
+  new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: data,
+        backgroundColor: colors.map(c => c + 'cc'),
+        borderColor: colors,
+        borderWidth: 2,
+        hoverOffset: 8,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '65%',
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { color: '#94a3b8', font: { family: 'Tajawal', size: 11 }, boxWidth: 12, padding: 8 },
+        },
+        tooltip: {
+          backgroundColor: '#1e293b',
+          borderColor: '#c9a84c',
+          borderWidth: 1,
+          titleColor: '#f8fafc',
+          bodyColor: '#94a3b8',
+          titleFont: { family: 'Tajawal' },
+          callbacks: {
+            label: (ctx) => ` ${ctx.label}: ${ctx.parsed}%`,
+          },
+        },
+      },
+    },
+  });
+});
+</script>
+{% endblock %}
