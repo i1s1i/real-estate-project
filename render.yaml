@@ -18,3 +18,11 @@ services:
         value: sqlite:///instance/app.db
       - key: PYTHON_VERSION
         value: 3.11.0
+      # Render يُعبئ هذا المتغير تلقائياً برابط تطبيقك العام
+      # مثال: https://real-estate-riyadh.onrender.com
+      # يُستخدم في config.py ويُعرض في /api/ping لإبقاء السيرفر مستيقظاً
+      - key: RENDER_EXTERNAL_URL
+        fromService:
+          type: web
+          name: real-estate-riyadh
+          property: host

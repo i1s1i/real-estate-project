@@ -2,15 +2,35 @@
 مسارات API - JSON Endpoints
 """
 import hashlib
+import json
+from datetime import datetime, timezone
 from flask import Blueprint, jsonify, request, current_app
 from app.models.neighborhood import Neighborhood
 from app.models.property import Property
 from app.models.developer import Developer, DeveloperProject
 from app.models.park import Park
 from app import cache, db
-import json
 
 api_bp = Blueprint('api', __name__)
+
+
+@api_bp.route('/ping')
+def ping():
+    """
+    نقطة فحص الحالة (Health Check / Keepalive).
+
+    تُستخدم مع خدمات مثل UptimeRobot أو Cron-job.org
+    لإرسال طلب HTTP كل 10 دقائق، مما يمنع Render
+    من إيقاف السيرفر في الخطة المجانية (ينام بعد 15 دقيقة خمول).
+
+    رابط الاستخدام: https://your-app.onrender.com/api/ping
+    """
+    return jsonify({
+        'status': 'ok',
+        'message': 'السيرفر يعمل بشكل طبيعي ✅',
+        'timestamp': datetime.now(timezone.utc).isoformat(),
+        'service': 'منصة العقار الذكية - الرياض'
+    }), 200
 
 
 @api_bp.route('/map/properties')

@@ -9,12 +9,28 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+def _fix_database_url(url: str | None) -> str:
+    """
+    إصلاح رابط قاعدة البيانات:
+    - Render يوفر DATABASE_URL بصيغة 'postgres://' القديمة،
+      لكن SQLAlchemy 1.4+ يتطلب 'postgresql://'.
+    - يتم التصحيح تلقائياً هنا.
+    """
+    if url and url.startswith('postgres://'):
+        return url.replace('postgres://', 'postgresql://', 1)
+    return url or 'sqlite:///app.db'
+
+
 class Config:
     """Base configuration."""
     SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production-!@#')
 
     # Database
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'sqlite:///app.db')
+    SQLALCHEMY_DATABASE_URI = _fix_database_url(os.environ.get('DATABASE_URL'))
+
+    # رابط التطبيق الخارجي على Render (يُستخدم لإبقاء السيرفر مستيقظاً)
+    # مثال: https://your-app-name.onrender.com
+    RENDER_EXTERNAL_URL = os.environ.get('RENDER_EXTERNAL_URL', '')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # Caching
