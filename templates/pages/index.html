@@ -31,10 +31,61 @@
       </div>
     </div>
 
-    <!-- Hero Map Preview -->
     <div class="hero-visual" data-reveal data-reveal-delay="2">
-      <div class="hero-map-preview" id="hero-mini-map">
-        <!-- Mini Leaflet Map -->
+      <div class="hero-map-preview" role="img" aria-label="تصميم توضيحي لخريطة أحياء شمال الرياض">
+        <div class="hero-map-topline">
+          <span><i class="fas fa-location-dot" aria-hidden="true"></i> شمال الرياض</span>
+          <span class="hero-map-status"><i aria-hidden="true"></i> تحليل السوق</span>
+        </div>
+        <svg class="hero-map-art" viewBox="0 0 640 500" aria-hidden="true" focusable="false">
+          <defs>
+            <pattern id="map-grid" width="34" height="34" patternUnits="userSpaceOnUse">
+              <path d="M 34 0 L 0 0 0 34" fill="none" stroke="currentColor" stroke-width="1" opacity=".34"/>
+            </pattern>
+            <linearGradient id="map-glow" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#83c7a5" stop-opacity=".25"/>
+              <stop offset="1" stop-color="#83c7a5" stop-opacity=".02"/>
+            </linearGradient>
+          </defs>
+          <rect width="640" height="500" fill="url(#map-grid)"/>
+          <path d="M-30 356 124 286 236 309 345 224 489 248 673 151" fill="none" stroke="#d7b56d" stroke-width="13" opacity=".17"/>
+          <path d="M-30 356 124 286 236 309 345 224 489 248 673 151" fill="none" stroke="#d7b56d" stroke-width="2" opacity=".72"/>
+          <path d="M112 -30 161 105 145 209 224 321 201 531M366 -30 337 83 375 171 341 281 399 531M549 -25 514 102 545 190 493 318 526 520" fill="none" stroke="#94a3b8" stroke-width="3" opacity=".3"/>
+          <path d="M-20 116 124 132 245 101 351 136 480 104 672 119M-22 430 133 390 249 424 356 375 491 409 662 350" fill="none" stroke="#94a3b8" stroke-width="2" opacity=".24"/>
+          <path d="M52 65 122 49 169 87 159 142 91 158 44 124Z" fill="url(#map-glow)" stroke="#83c7a5" stroke-opacity=".25"/>
+          <path d="m410 322 46-24 39 16 4 48-42 21-46-18z" fill="url(#map-glow)" stroke="#83c7a5" stroke-opacity=".25"/>
+          <g fill="#83c7a5" fill-opacity=".18" stroke="#83c7a5" stroke-opacity=".35">
+            <circle cx="84" cy="220" r="27"/><circle cx="584" cy="278" r="23"/>
+            <circle cx="277" cy="74" r="18"/><circle cx="290" cy="466" r="26"/>
+          </g>
+          <g class="hero-map-pin">
+            <circle cx="258" cy="213" r="27" fill="#d7b56d" fill-opacity=".14"/>
+            <circle cx="258" cy="213" r="15" fill="#d7b56d"/>
+            <circle cx="258" cy="213" r="5" fill="#14231f"/>
+          </g>
+          <g class="hero-map-pin hero-map-pin--secondary">
+            <circle cx="467" cy="160" r="22" fill="#83c7a5" fill-opacity=".13"/>
+            <circle cx="467" cy="160" r="11" fill="#83c7a5"/>
+            <circle cx="467" cy="160" r="4" fill="#14231f"/>
+          </g>
+          <g class="hero-map-pin hero-map-pin--tertiary">
+            <circle cx="151" cy="385" r="20" fill="#83c7a5" fill-opacity=".13"/>
+            <circle cx="151" cy="385" r="10" fill="#83c7a5"/>
+            <circle cx="151" cy="385" r="4" fill="#14231f"/>
+          </g>
+          <g fill="currentColor" font-family="Tajawal, sans-serif" font-size="18" font-weight="700" opacity=".78">
+            <text x="65" y="197">الياسمين</text>
+            <text x="278" y="192">الملقا</text>
+            <text x="478" y="143">النرجس</text>
+            <text x="169" y="365">الغدير</text>
+            <text x="449" y="375">المروج</text>
+          </g>
+        </svg>
+        <div class="hero-map-caption">
+          <span class="hero-map-caption-icon"><i class="fas fa-chart-line" aria-hidden="true"></i></span>
+          <span><strong>نظرة أوضح على السوق</strong><small>{{ total_neighborhoods }} حياً · بيانات تتحدث باستمرار</small></span>
+          <i class="fas fa-arrow-up-left-from-circle" aria-hidden="true"></i>
+        </div>
       </div>
     </div>
   </div>
@@ -88,7 +139,7 @@
       <select name="neighborhood" class="form-control">
         <option value="">كل الأحياء</option>
         {% for n in neighborhoods %}
-        <option value="{{ n.id }}">{{ n.name_ar }}</option>
+        <option value="{{ n.id }}" data-ar="{{ n.name_ar }}" data-en="{{ n.name_en }}">{{ n.name_ar }}</option>
         {% endfor %}
       </select>
     </div>
@@ -115,14 +166,17 @@
   <div class="properties-grid" id="featured-grid">
     <!-- Loaded dynamically by app.js -->
     {% for prop in featured %}
-    <div class="property-card card-lift" data-reveal data-reveal-delay="{{ loop.index }}">
+    <div class="property-card card-lift" data-reveal data-reveal-delay="{{ loop.index }}" onclick="openPropertyModalById({{ prop.id }})" style="cursor:pointer">
       <div class="property-img">
         <img src="{{ prop.image_url or 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=600' }}"
           alt="{{ prop.title }}" loading="lazy" width="600" height="400"
           onerror="this.src='https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=600'">
         <span class="badge {{ 'badge-sale' if prop.listing_type == 'sale' else 'badge-rent' }}">
-          {{ 'للبيع' if prop.listing_type == 'sale' else 'للإيجار' }}
+          {{ '🏷️ للبيع' if prop.listing_type == 'sale' else '🔑 للإيجار السنوي' }}
         </span>
+        <div class="badge" style="bottom:0.75rem;right:0.75rem;top:auto;background:rgba(0,0,0,0.65);color:#fff;font-size:0.72rem">
+          {{ {'villa':'🏠 فيلا','apartment':'🏢 شقة','land':'🗺️ أرض','commercial':'🏪 تجاري'}.get(prop.property_type, prop.property_type) }}
+        </div>
         {% if prop.is_featured %}
         <span class="badge badge-featured" style="top:1rem;left:1rem">⭐ مميز</span>
         {% endif %}
@@ -137,9 +191,15 @@
         </div>
         {% if prop.neighborhood %}
         <p style="font-size:0.8rem;color:var(--color-text-secondary);margin-top:0.5rem">
-          <i class="fas fa-map-marker-alt" style="color:var(--color-accent-primary)"></i> {{ prop.neighborhood.name_ar }}
+          <i class="fas fa-map-marker-alt" style="color:var(--color-accent-primary)"></i>
+          <span data-ar="{{ prop.neighborhood.name_ar }}" data-en="{{ prop.neighborhood.name_en }}">{{ prop.neighborhood.name_ar }}</span>
         </p>
         {% endif %}
+        <div style="margin-top:0.75rem;text-align:center">
+          <span class="btn btn-ghost btn-sm" style="width:100%;pointer-events:none">
+            <i class="fas fa-eye"></i> عرض التفاصيل
+          </span>
+        </div>
       </div>
     </div>
     {% endfor %}
@@ -147,7 +207,7 @@
 </section>
 
 <!-- Neighborhoods Section -->
-<section class="section" style="background:rgba(30,41,59,0.4);padding-top:4rem;padding-bottom:4rem">
+<section class="section" style="background:var(--color-bg-section);padding-top:4rem;padding-bottom:4rem">
   <div class="container">
     <div class="section-header" data-reveal>
       <h2>🏙️ أبرز الأحياء</h2>
@@ -166,8 +226,7 @@
         onclick="window.location.href='{{ url_for('pages.map_view') }}?neighborhood={{ n.id }}'">
         <div style="display:flex;justify-content:space-between;align-items:flex-start">
           <div>
-            <div class="neighborhood-name">{{ n.name_ar }}</div>
-            <p style="color:var(--color-text-muted);font-size:0.8rem">{{ n.name_en }}</p>
+            <div class="neighborhood-name" data-ar="{{ n.name_ar }}" data-en="{{ n.name_en }}">{{ n.name_ar }}</div>
           </div>
           <div class="score-ring" style="--score:{{ score }};--score-color:{{ score_color }}">
             <span class="score-value">{{ score|int }}</span>
@@ -175,9 +234,9 @@
         </div>
         <div class="neighborhood-stats">
           <div class="stat-pill"><i class="fas fa-home"></i> {{ "{:,.0f}".format(n.land_price_per_sqm) }} ريال/م²</div>
-          <div class="stat-pill"><i class="fas fa-tree"></i> {{ n.parks_count }} حدائق</div>
-          <div class="stat-pill"><i class="fas fa-hospital"></i> {{ n.hospitals_count }} مستشفى</div>
-          <div class="stat-pill"><i class="fas fa-school"></i> {{ n.schools_count }} مدرسة</div>
+          <div class="stat-pill"><i class="fas fa-tree"></i> {{ n.parks_count | parks_plural }}</div>
+          <div class="stat-pill"><i class="fas fa-hospital"></i> {{ n.hospitals_count | hospitals_plural }}</div>
+          <div class="stat-pill"><i class="fas fa-school"></i> {{ n.schools_count | schools_plural }}</div>
         </div>
       </div>
       {% endfor %}
@@ -234,58 +293,4 @@
   </div>
 </section>
 
-{% endblock %}
-
-{% block extra_scripts %}
-<!-- Mini Hero Map -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script>
-window.addEventListener('load', function() {
-  const miniMap = L.map('hero-mini-map', {
-    center: [24.7136, 46.6753],
-    zoom: 11,
-    zoomControl: false,
-    scrollWheelZoom: false,
-    dragging: false,
-    doubleClickZoom: false,
-  });
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    attribution: '', subdomains: 'abcd',
-  }).addTo(miniMap);
-
-  // Sample markers
-  const neighborhoods = [
-    { lat: 24.8188, lng: 46.6288, name: 'الياسمين', score: 88 },
-    { lat: 24.8288, lng: 46.6388, name: 'الملقا', score: 93 },
-    { lat: 24.7388, lng: 46.6888, name: 'المروج', score: 95 },
-    { lat: 24.7788, lng: 46.7088, name: 'الغدير', score: 84 },
-    { lat: 24.8388, lng: 46.6488, name: 'النرجس', score: 82 },
-  ];
-
-  function getColor(s) {
-    if (s >= 85) return '#10b981';
-    if (s >= 70) return '#f59e0b';
-    return '#ef4444';
-  }
-
-  neighborhoods.forEach(n => {
-    const c = getColor(n.score);
-    L.circleMarker([n.lat, n.lng], {
-      radius: 14,
-      fillColor: c,
-      fillOpacity: 0.35,
-      color: c,
-      weight: 2,
-    }).addTo(miniMap);
-
-    const icon = L.divIcon({
-      className: '',
-      html: `<div style="background:${c};color:#0f172a;font-weight:800;font-size:10px;padding:3px 7px;border-radius:20px;white-space:nowrap;font-family:Tajawal,sans-serif">${n.name}</div>`,
-      iconAnchor: [0, 0],
-    });
-    L.marker([n.lat + 0.005, n.lng], { icon }).addTo(miniMap);
-  });
-});
-</script>
 {% endblock %}

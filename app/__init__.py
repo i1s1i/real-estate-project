@@ -54,10 +54,15 @@ def create_app(config_name='default'):
         return {'now': lambda: datetime.now(timezone.utc)}
 
     # Register Jinja2 template filters from utils
-    from app.utils.formatters import format_price, format_area, score_to_color, score_to_grade
+    from app.utils.formatters import (
+        format_price, format_area, score_to_color,
+        format_hospitals, format_schools, format_parks
+    )
     app.jinja_env.filters['format_price'] = format_price
     app.jinja_env.filters['format_area'] = format_area
     app.jinja_env.filters['score_color'] = score_to_color
-    app.jinja_env.filters['score_grade'] = score_to_grade
+    app.jinja_env.filters['hospitals_plural'] = format_hospitals
+    app.jinja_env.filters['schools_plural'] = format_schools
+    app.jinja_env.filters['parks_plural'] = format_parks
 
     return app

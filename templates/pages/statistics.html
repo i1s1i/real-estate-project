@@ -129,6 +129,7 @@ window.addEventListener('load', function() {
   const rentVsSaleData = {{ rent_vs_sale_data|tojson }};
   
   const topRoiLabels = {{ top_roi_labels|tojson }};
+  const topRoiLabelsEn = {{ top_roi_labels_en|tojson }};
   const topRoiData = {{ top_roi_data|tojson }};
   
   const fontFam = 'Tajawal, sans-serif';
@@ -144,8 +145,8 @@ window.addEventListener('load', function() {
     data: {
       labels: years,
       datasets: [
-        { label: 'العروض العقارية', data: supplyTrend, backgroundColor: goldColor, borderRadius: 4 },
-        { label: 'الطلب المستدام', data: demandTrend, backgroundColor: '#3b82f6', borderRadius: 4 }
+        { label: 'العروض العقارية', _originalLabel: 'العروض العقارية', data: supplyTrend, backgroundColor: goldColor, borderRadius: 4 },
+        { label: 'الطلب المستدام', _originalLabel: 'الطلب المستدام', data: demandTrend, backgroundColor: '#3b82f6', borderRadius: 4 }
       ]
     },
     options: {
@@ -168,7 +169,7 @@ window.addEventListener('load', function() {
     data: {
       labels: years,
       datasets: [{
-        label: 'متوسط السعر (ريال/م²)', data: priceTrend, borderColor: '#10b981', backgroundColor: gradient,
+        label: 'متوسط السعر (ريال/م²)', _originalLabel: 'متوسط السعر (ريال/م²)', data: priceTrend, borderColor: '#10b981', backgroundColor: gradient,
         borderWidth: 3, tension: 0.4, fill: true, pointBackgroundColor: '#fff', pointBorderWidth: 2, pointRadius: 4
       }]
     },
@@ -224,6 +225,7 @@ window.addEventListener('load', function() {
       labels: topRoiLabels,
       datasets: [{
         label: 'العائد الإيجاري (%)',
+        _originalLabel: 'العائد الإيجاري (%)',
         data: topRoiData,
         backgroundColor: '#10b981',
         borderRadius: 4
@@ -239,6 +241,22 @@ window.addEventListener('load', function() {
       }
     }
   });
+
+  function updateChartLanguage() {
+    Object.values(Chart.instances).forEach(chart => {
+      if (!chart.data._originalLabels) chart.data._originalLabels = [...chart.data.labels];
+      chart.data.labels = chart.canvas.id === 'roiChart' && document.documentElement.lang === 'en'
+        ? topRoiLabelsEn
+        : chart.data._originalLabels.map(label => window.translateForCurrentLanguage(label));
+      chart.data.datasets.forEach(dataset => {
+        if (dataset.label && dataset._originalLabel === undefined) dataset._originalLabel = dataset.label;
+        if (dataset._originalLabel) dataset.label = window.translateForCurrentLanguage(dataset._originalLabel);
+      });
+      chart.update('none');
+    });
+  }
+  window.addEventListener('aqar-language-change', updateChartLanguage);
+  updateChartLanguage();
 });
 </script>
 {% endblock %}

@@ -42,7 +42,7 @@
         <select name="neighborhood" class="form-control">
           <option value="">كل الأحياء</option>
           {% for n in neighborhoods %}
-          <option value="{{ n.id }}" {{ 'selected' if filters.neighborhood|string == n.id|string }}>{{ n.name_ar }}</option>
+          <option value="{{ n.id }}" data-ar="{{ n.name_ar }}" data-en="{{ n.name_en }}" {{ 'selected' if filters.neighborhood|string == n.id|string }}>{{ n.name_ar }}</option>
           {% endfor %}
         </select>
       </div>
@@ -59,18 +59,18 @@
   {% if pagination.items %}
   <div class="properties-grid">
     {% for prop in pagination.items %}
-    <div class="property-card card-lift" data-reveal data-reveal-delay="{{ loop.index % 4 }}">
+    <div class="property-card card-lift" data-reveal data-reveal-delay="{{ loop.index % 4 }}" onclick="openPropertyModalById({{ prop.id }})" style="cursor:pointer">
       <div class="property-img">
         <img src="{{ prop.image_url or 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=600' }}"
           alt="{{ prop.title }}" loading="lazy" width="600" height="400"
           onerror="this.src='https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=600'">
         <span class="badge {{ 'badge-sale' if prop.listing_type == 'sale' else 'badge-rent' }}">
-          {{ 'للبيع' if prop.listing_type == 'sale' else 'للإيجار' }}
+          {{ '🏷️ للبيع' if prop.listing_type == 'sale' else '🔑 للإيجار السنوي' }}
         </span>
         {% if prop.is_featured %}
         <span class="badge badge-featured" style="top:1rem;left:1rem">⭐ مميز</span>
         {% endif %}
-        <div class="badge" style="bottom:0.75rem;right:0.75rem;top:auto;background:rgba(0,0,0,0.6);color:#f8fafc;font-size:0.7rem">
+        <div class="badge" style="bottom:0.75rem;right:0.75rem;top:auto;background:rgba(0,0,0,0.65);color:#f8fafc;font-size:0.72rem">
           {{ {'villa':'🏠 فيلا','apartment':'🏢 شقة','land':'🗺️ أرض','commercial':'🏪 تجاري'}.get(prop.property_type, prop.property_type) }}
         </div>
       </div>
@@ -89,12 +89,16 @@
         </div>
         {% if prop.neighborhood %}
         <p style="font-size:0.8rem;color:var(--color-text-secondary);margin-top:0.5rem">
-          <i class="fas fa-map-marker-alt" style="color:var(--color-accent-primary)"></i> {{ prop.neighborhood.name_ar }}
+          <i class="fas fa-map-marker-alt" style="color:var(--color-accent-primary)"></i>
+          <span data-ar="{{ prop.neighborhood.name_ar }}" data-en="{{ prop.neighborhood.name_en }}">{{ prop.neighborhood.name_ar }}</span>
         </p>
         {% endif %}
-        <div style="display:flex;gap:0.5rem;margin-top:0.75rem">
-          <a href="{{ url_for('pages.map_view') }}" class="btn btn-secondary btn-sm btn-interactive" style="flex:1;justify-content:center">
-            <i class="fas fa-map"></i> على الخريطة
+        <div style="display:flex;gap:0.5rem;margin-top:0.75rem" onclick="event.stopPropagation()">
+          <button onclick="openPropertyModalById({{ prop.id }})" class="btn btn-primary btn-sm btn-interactive" style="flex:1;justify-content:center">
+            <i class="fas fa-eye"></i> التفاصيل
+          </button>
+          <a href="{{ url_for('pages.map_view', prop_id=prop.id) }}" class="btn btn-secondary btn-sm btn-interactive" style="flex:1;justify-content:center">
+            <i class="fas fa-map-marker-alt"></i> بالخريطة
           </a>
         </div>
       </div>

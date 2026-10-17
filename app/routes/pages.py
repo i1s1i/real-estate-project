@@ -11,6 +11,17 @@ from app import db
 pages_bp = Blueprint('pages', __name__)
 
 
+def _get_unique_developers():
+    """Return one highest-rated record per displayed developer name."""
+    developers = Developer.query.order_by(Developer.rating.desc(), Developer.id.asc()).all()
+    unique_developers = {}
+    for developer in developers:
+        name = ' '.join((developer.name_ar or '').split()).casefold()
+        if name:
+            unique_developers.setdefault(name, developer)
+    return list(unique_developers.values())
+
+
 # ── Admin Authentication Decorator ────────────────────────────
 def admin_required(f):
     """Decorator to require admin login for protected routes."""
@@ -30,7 +41,7 @@ def index():
     neighborhoods = Neighborhood.query.order_by(Neighborhood.infrastructure_score.desc()).limit(8).all()
     total_properties = Property.query.count()
     total_neighborhoods = Neighborhood.query.count()
-    total_developers = Developer.query.count()
+    total_developers = len(_get_unique_developers())
     return render_template('pages/index.html',
                            featured=featured,
                            neighborhoods=neighborhoods,
@@ -56,7 +67,7 @@ def compare():
 @pages_bp.route('/developers')
 def developers():
     """صفحة المطورين العقاريين"""
-    devs = Developer.query.order_by(Developer.rating.desc()).all()
+    devs = _get_unique_developers()
     return render_template('pages/developers.html', developers=devs)
 
 
@@ -93,6 +104,7 @@ def statistics():
     ).limit(5).all()
 
     top_roi_labels = [n.name_ar.replace('حي ', '') for n in top_neighborhoods]
+    top_roi_labels_en = [n.name_en for n in top_neighborhoods]
     top_roi_data = [
         round((n.avg_rent_per_sqm / n.land_price_per_sqm * 100), 1)
         if n.land_price_per_sqm > 0 else 0
@@ -109,6 +121,7 @@ def statistics():
                            rent_vs_sale_labels=rent_vs_sale_labels,
                            rent_vs_sale_data=rent_vs_sale_data,
                            top_roi_labels=top_roi_labels,
+                           top_roi_labels_en=top_roi_labels_en,
                            top_roi_data=top_roi_data,
                            total_properties=total_properties,
                            sale_count=sale_count,

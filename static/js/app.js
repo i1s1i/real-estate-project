@@ -22,17 +22,22 @@ function formatPrice(price) {
 // ── Property Card HTML ────────────────────────────────────────
 function buildPropertyCard(prop) {
   const imgFallback = 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=600';
-  const badgeClass = prop.listing_type === 'sale' ? 'badge-sale' : 'badge-rent';
-  const badgeText = prop.listing_type === 'sale' ? 'للبيع' : 'للإيجار';
+  const isSale = prop.listing_type === 'sale';
+  const badgeClass = isSale ? 'badge-sale' : 'badge-rent';
+  const badgeText = isSale ? '🏷️ للبيع' : '🔑 للإيجار السنوي';
+  const typeText = TYPE_LABELS[prop.property_type] || prop.property_type;
 
   return `
-    <div class="property-card card-lift" data-reveal>
+    <div class="property-card card-lift" data-reveal onclick="openPropertyModalById(${prop.id})" style="cursor:pointer">
       <div class="property-img">
         <img src="${prop.image_url || imgFallback}"
           alt="${prop.title}"
           onerror="this.src='${imgFallback}'"
           loading="lazy">
         <span class="badge ${badgeClass}">${badgeText}</span>
+        <div class="badge" style="bottom:0.75rem;right:0.75rem;top:auto;background:rgba(0,0,0,0.65);color:#fff;font-size:0.72rem">
+          ${typeText}
+        </div>
         ${prop.is_featured ? '<span class="badge badge-featured" style="top:1rem;left:1rem">⭐ مميز</span>' : ''}
       </div>
       <div class="property-info">
@@ -44,6 +49,11 @@ function buildPropertyCard(prop) {
           ${prop.area_sqm ? `<span><i class="fas fa-ruler-combined"></i> ${prop.area_sqm} م²</span>` : ''}
         </div>
         ${prop.neighborhood_name ? `<p style="font-size:0.8rem;color:var(--color-text-secondary);margin-top:0.5rem"><i class="fas fa-map-marker-alt" style="color:var(--color-accent-primary)"></i> ${prop.neighborhood_name}</p>` : ''}
+        <div style="margin-top:0.75rem;text-align:center">
+          <span class="btn btn-ghost btn-sm" style="width:100%;pointer-events:none">
+            <i class="fas fa-eye"></i> عرض التفاصيل
+          </span>
+        </div>
       </div>
     </div>
   `;
@@ -63,10 +73,12 @@ function getScoreColor(score) {
 let compareChartLine = null;
 let compareChartBar = null;
 const compareColors = ['#c9a84c', '#10b981', '#3b82f6', '#f97316'];
+let comparedNeighborhoods = [];
 
 function renderCompareCards(neighborhoods) {
   const resultsEl = document.getElementById('compare-results');
   if (!resultsEl) return;
+  comparedNeighborhoods = neighborhoods;
 
   if (!neighborhoods.length) {
     resultsEl.innerHTML = '<p class="text-muted text-center" style="padding:2rem">اختر حيين أو أكثر للمقارنة</p>';
@@ -83,8 +95,7 @@ function renderCompareCards(neighborhoods) {
       <div class="compare-card-header">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <div>
-            <h3>${n.name_ar}</h3>
-            <p class="text-muted" style="font-size:0.8rem">${n.name_en}</p>
+            <h3>${document.documentElement.lang === 'en' ? (n.name_en || n.name_ar) : n.name_ar}</h3>
           </div>
           <div class="score-ring" style="--score:${score};--score-color:${scoreColor}">
             <span class="score-value">${score}</span>
@@ -150,7 +161,7 @@ function renderLineChart(neighborhoods) {
   if (compareChartLine) compareChartLine.destroy();
 
   const datasets = neighborhoods.map((n, i) => ({
-    label: n.name_ar,
+    label: document.documentElement.lang === 'en' ? (n.name_en || n.name_ar) : n.name_ar,
     data: n.price_history?.prices || [],
     borderColor: compareColors[i],
     backgroundColor: compareColors[i] + '22',
@@ -170,6 +181,7 @@ function renderLineChart(neighborhoods) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      resizeDelay: 200,
       interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: {
@@ -217,9 +229,9 @@ function renderBarChart(neighborhoods) {
   compareChartBar = new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: ['الحدائق', 'المستشفيات', 'المدارس', 'المجمعات', 'المقاهي'],
+      labels: ['الحدائق', 'المستشفيات', 'المدارس', 'المجمعات', 'المقاهي'].map(window.translateForCurrentLanguage),
       datasets: neighborhoods.map((n, i) => ({
-        label: n.name_ar,
+        label: document.documentElement.lang === 'en' ? (n.name_en || n.name_ar) : n.name_ar,
         data: [n.parks_count, n.hospitals_count, n.schools_count, n.malls_count, n.cafes_count],
         backgroundColor: compareColors[i] + 'cc',
         borderColor: compareColors[i],
@@ -230,6 +242,7 @@ function renderBarChart(neighborhoods) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      resizeDelay: 200,
       plugins: {
         legend: {
           labels: { color: '#94a3b8', font: { family: 'Tajawal' } },
@@ -250,6 +263,10 @@ function renderBarChart(neighborhoods) {
     },
   });
 }
+
+window.addEventListener('aqar-language-change', () => {
+  if (comparedNeighborhoods.length) renderCompareCards(comparedNeighborhoods);
+});
 
 // ── Compare Page Logic ────────────────────────────────────────
 async function runCompare() {
@@ -327,3 +344,194 @@ if (searchForm) {
     window.location.href = url;
   });
 }
+
+// ═══════════════════════════════════════════════════════════
+// PROPERTY DETAILS MODAL SYSTEM
+// ═══════════════════════════════════════════════════════════
+let currentModalProperty = null;
+
+async function openPropertyModalById(propId) {
+  if (!propId) return;
+  try {
+    const res = await fetch(`/api/properties/${propId}`);
+    const data = await res.json();
+    if (data.success && data.data) {
+      openPropertyModal(data.data);
+    }
+  } catch (err) {
+    console.error('Error fetching property details:', err);
+  }
+}
+window.openPropertyModalById = openPropertyModalById;
+
+function openPropertyModal(prop) {
+  currentModalProperty = prop;
+  const modal = document.getElementById('propertyDetailsModal');
+  if (!modal) return;
+
+  const img = document.getElementById('modalPropertyImg');
+  const title = document.getElementById('modalPropertyTitle');
+  const location = document.getElementById('modalNeighborhoodName');
+  const price = document.getElementById('modalPropertyPrice');
+  const priceSubtitle = document.getElementById('modalPriceSubtitle');
+  const listingBadge = document.getElementById('modalPropertyListingBadge');
+  const typeBadge = document.getElementById('modalPropertyTypeBadge');
+  const typeVal = document.getElementById('modalPropertyType');
+  const listingVal = document.getElementById('modalPropertyListing');
+  const areaVal = document.getElementById('modalPropertyArea');
+  const meterVal = document.getElementById('modalPropertyMeterPrice');
+  const bedVal = document.getElementById('modalPropertyBedrooms');
+  const bathVal = document.getElementById('modalPropertyBathrooms');
+  const desc = document.getElementById('modalPropertyDescription');
+  const mapLink = document.getElementById('modalMapLink');
+
+  if (img) img.src = prop.image_url || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800';
+  if (title) title.textContent = prop.title;
+  if (location) location.textContent = (prop.neighborhood_name || 'شمال الرياض') + (prop.neighborhood_score ? ` (درجة البنية التحتية: ${prop.neighborhood_score}%)` : '');
+  if (price) price.textContent = prop.price_formatted || (Number(prop.price).toLocaleString('ar-SA') + ' ريال');
+  if (priceSubtitle) priceSubtitle.textContent = prop.listing_type === 'rent' ? 'قيمة الإيجار السنوي' : 'سعر الشراء الإجمالي';
+
+  const isSale = prop.listing_type === 'sale';
+  if (listingBadge) {
+    listingBadge.className = `badge ${isSale ? 'badge-sale' : 'badge-rent'}`;
+    listingBadge.textContent = isSale ? '🏷️ للبيع' : '🔑 للإيجار السنوي';
+  }
+  if (typeBadge) {
+    typeBadge.textContent = prop.property_type_ar || TYPE_LABELS[prop.property_type] || prop.property_type;
+  }
+
+  if (typeVal) typeVal.innerHTML = `<i class="fas fa-home" style="color:var(--color-accent-primary)"></i> ${prop.property_type_ar || TYPE_LABELS[prop.property_type] || prop.property_type}`;
+  if (listingVal) listingVal.innerHTML = `<i class="fas fa-tag" style="color:var(--color-accent-primary)"></i> ${isSale ? 'للبيع' : 'للإيجار السنوي'}`;
+  if (areaVal) areaVal.innerHTML = `<i class="fas fa-ruler-combined" style="color:var(--color-accent-primary)"></i> ${prop.area_sqm || '-'} م²`;
+  if (meterVal) meterVal.innerHTML = `<i class="fas fa-chart-line" style="color:var(--color-accent-primary)"></i> ${prop.price_per_sqm ? Number(prop.price_per_sqm).toLocaleString('ar-SA') + ' ريال/م²' : '-'}`;
+  if (bedVal) bedVal.innerHTML = `<i class="fas fa-bed" style="color:var(--color-accent-primary)"></i> ${prop.bedrooms ? prop.bedrooms + ' غرف' : 'غير متوفر'}`;
+  if (bathVal) bathVal.innerHTML = `<i class="fas fa-bath" style="color:var(--color-accent-primary)"></i> ${prop.bathrooms ? prop.bathrooms + ' حمام' : 'غير متوفر'}`;
+  if (desc) desc.textContent = prop.description || 'عقار مميز بموقع استراتيجي بالقرب من الخدمات والمرافق الرئيسية في الرياض.';
+
+  if (mapLink) {
+    mapLink.href = `/map?prop_id=${prop.id}`;
+    mapLink.onclick = (e) => {
+      if (window.location.pathname.includes('/map')) {
+        e.preventDefault();
+        closePropertyModal();
+        if (typeof flyToPropertyId === 'function') {
+          flyToPropertyId(prop.id);
+        } else if (prop.lat && prop.lng && typeof flyToProperty === 'function') {
+          flyToProperty(prop.lat, prop.lng);
+        }
+      }
+    };
+  }
+
+  modal.classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+window.openPropertyModal = openPropertyModal;
+
+function closePropertyModal() {
+  const modal = document.getElementById('propertyDetailsModal');
+  if (modal) modal.classList.remove('active');
+  document.body.style.overflow = '';
+}
+window.closePropertyModal = closePropertyModal;
+
+function sharePropertyDetails() {
+  if (!currentModalProperty) return;
+  const url = window.location.origin + `/map?prop_id=${currentModalProperty.id}`;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(url);
+    if (window.showToast) window.showToast('تم نسخ رابط العقار إلى الحافظة بنجاح ✅');
+  } else {
+    alert('رابط العقار: ' + url);
+  }
+}
+window.sharePropertyDetails = sharePropertyDetails;
+
+function simulateContactAgent() {
+  if (window.showToast) {
+    window.showToast('تم إرسال طلب استفسار للوسيط العقاري المعتمد بنجاح 📞');
+  } else {
+    alert('تم إرسال طلب استفسار للوسيط العقاري المعتمد بنجاح!');
+  }
+}
+window.simulateContactAgent = simulateContactAgent;
+
+// ═══════════════════════════════════════════════════════════
+// AI ASSISTANT (RAG ADVISOR) CHAT INTERFACE
+// ═══════════════════════════════════════════════════════════
+function toggleAIChat() {
+  const drawer = document.getElementById('aiChatDrawer');
+  if (drawer) {
+    drawer.classList.toggle('open');
+    if (drawer.classList.contains('open')) {
+      const input = document.getElementById('aiChatInput');
+      window.setTimeout(() => input?.focus(), 350);
+    }
+  }
+}
+window.toggleAIChat = toggleAIChat;
+
+function sendQuickPrompt(promptText) {
+  const input = document.getElementById('aiChatInput');
+  if (input) {
+    input.value = promptText;
+    handleAIChatSubmit();
+  }
+}
+window.sendQuickPrompt = sendQuickPrompt;
+
+async function handleAIChatSubmit(e) {
+  if (e && e.preventDefault) e.preventDefault();
+  const input = document.getElementById('aiChatInput');
+  const messagesBox = document.getElementById('aiChatMessages');
+  if (!input || !messagesBox) return;
+
+  const query = input.value.trim();
+  if (!query) return;
+
+  // Append user message
+  const userBubble = document.createElement('div');
+  userBubble.className = 'chat-bubble user';
+  userBubble.textContent = query;
+  messagesBox.appendChild(userBubble);
+  input.value = '';
+  messagesBox.scrollTop = messagesBox.scrollHeight;
+
+  // Append bot loading bubble
+  const botBubble = document.createElement('div');
+  botBubble.className = 'chat-bubble bot';
+  botBubble.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري استرجاع البيانات وتحليل السوق...';
+  messagesBox.appendChild(botBubble);
+  messagesBox.scrollTop = messagesBox.scrollHeight;
+
+  try {
+    const res = await fetch('/api/ai/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query })
+    });
+    const data = await res.json();
+    if (data.reply) {
+      const formattedReply = data.reply
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/\n/g, '<br>');
+      botBubble.innerHTML = formattedReply;
+    } else {
+      botBubble.textContent = 'عذراً، لم أتمكن من معالجة الطلب حالياً. يرجى المحاولة مرة أخرى.';
+    }
+  } catch (err) {
+    botBubble.textContent = 'حدث خطأ في الاتصال بخدمة الذكاء الاصطناعي.';
+  }
+  messagesBox.scrollTop = messagesBox.scrollHeight;
+}
+window.handleAIChatSubmit = handleAIChatSubmit;
+
+// Close modal on Escape key
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    closePropertyModal();
+    const drawer = document.getElementById('aiChatDrawer');
+    if (drawer) drawer.classList.remove('open');
+  }
+});

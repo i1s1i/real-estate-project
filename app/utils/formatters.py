@@ -43,3 +43,55 @@ def score_to_grade(score):
         return 'متوسط'
     else:
         return 'يحتاج تحسين'
+
+
+
+def format_hospitals(count):
+    """تنسيق عدد المستشفيات حسب قواعد العدد في اللغة العربية"""
+    if count is None:
+        count = 0
+    count = int(count)
+    if count == 0:
+        return "لا توجد مستشفيات"
+    elif count == 1:
+        return "مستشفى واحد"
+    elif count == 2:
+        return "مستشفيان"
+    elif 3 <= count <= 10:
+        return f"{count} مستشفيات"
+    else:
+        return f"{count} مستشفى"
+
+
+def format_schools(count):
+    """تنسيق عدد المدارس حسب قواعد العدد في اللغة العربية"""
+    if count is None:
+        count = 0
+    count = int(count)
+    if count == 0:
+        return "لا توجد مدارس"
+    elif count == 1:
+        return "مدرسة واحدة"
+    elif count == 2:
+        return "مدرستان"
+    elif 3 <= count <= 10:
+        return f"{count} مدارس"
+    else:
+        return f"{count} مدرسة"
+
+
+def format_parks(count):
+    """تنسيق عدد الحدائق حسب قواعد العدد في اللغة العربية"""
+    if count is None:
+        count = 0
+    count = int(count)
+    if count == 0:
+        return "لا توجد حدائق"
+    elif count == 1:
+        return "حديقة واحدة"
+    elif count == 2:
+        return "حديقتان"
+    elif 3 <= count <= 10:
+        return f"{count} حدائق"
+    else:
+        return f"{count} حديقة"

@@ -29,9 +29,10 @@ class Property(db.Model):
                            onupdate=lambda: datetime.now(timezone.utc))
 
     def price_formatted(self):
+        suffix = " / سنوياً" if self.listing_type == 'rent' else ""
         if self.price >= 1_000_000:
-            return f"{self.price/1_000_000:.1f} مليون ريال"
-        return f"{int(self.price):,} ريال"
+            return f"{self.price/1_000_000:.1f} مليون ريال{suffix}"
+        return f"{int(self.price):,} ريال{suffix}"
 
     def price_per_sqm(self):
         if self.area_sqm and self.area_sqm > 0:
@@ -39,22 +40,34 @@ class Property(db.Model):
         return 0
 
     def to_dict(self):
+        type_ar_map = {
+            'villa': 'فيلا',
+            'apartment': 'شقة',
+            'land': 'أرض',
+            'commercial': 'تجاري'
+        }
         return {
             'id': self.id,
             'title': self.title,
             'property_type': self.property_type,
+            'property_type_ar': type_ar_map.get(self.property_type, self.property_type),
             'listing_type': self.listing_type,
+            'listing_type_ar': 'للإيجار السنوي' if self.listing_type == 'rent' else 'للبيع',
             'price': self.price,
             'price_formatted': self.price_formatted(),
+            'price_per_sqm': round(self.price_per_sqm(), 1) if self.price_per_sqm() else 0,
             'area_sqm': self.area_sqm,
             'bedrooms': self.bedrooms,
             'bathrooms': self.bathrooms,
             'lat': self.latitude,
             'lng': self.longitude,
             'image_url': self.image_url,
+            'description': self.description or f"عقار مميز في {self.neighborhood.name_ar if self.neighborhood else 'شمال الرياض'} بتصميم عصري وموقع استراتيجي قريب من كافة الخدمات.",
             'neighborhood_id': self.neighborhood_id,
             'neighborhood_name': self.neighborhood.name_ar if self.neighborhood else '',
+            'neighborhood_score': round(self.neighborhood.infrastructure_score) if (self.neighborhood and self.neighborhood.infrastructure_score) else None,
             'is_featured': self.is_featured,
+            'is_verified': self.is_verified,
         }
 
     def __repr__(self):

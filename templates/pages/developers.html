@@ -32,7 +32,7 @@
   </div>
 
   <!-- Market Share Chart -->
-  <div style="display:grid;grid-template-columns:1fr 320px;gap:1.5rem;margin-bottom:2.5rem;align-items:start">
+  <div class="developer-market-layout" style="margin-bottom:2.5rem;align-items:start">
     <div class="chart-container" data-reveal style="height:280px">
       <h3 style="font-size:1rem;margin-bottom:1rem">
         <i class="fas fa-chart-pie" style="color:var(--color-accent-primary)"></i>
@@ -45,7 +45,7 @@
       {% for dev in developers[:5] %}
       <div class="market-bar-container">
         <div class="market-bar-label">
-          <span>{{ dev.name_ar.split()[0] }}</span>
+          <span data-ar="{{ dev.name_ar.split()[0] }}" data-en="{{ (dev.name_en or dev.name_ar).split()[0] }}">{{ dev.name_ar.split()[0] }}</span>
           <span class="text-gold">{{ dev.market_share_pct }}%</span>
         </div>
         <div class="market-bar">
@@ -69,7 +69,7 @@
           {{ dev.name_ar[0] }}
         </div>
         <div>
-          <div class="developer-name">{{ dev.name_ar }}</div>
+          <div class="developer-name" data-ar="{{ dev.name_ar }}" data-en="{{ dev.name_en or dev.name_ar }}">{{ dev.name_ar }}</div>
           <div style="font-size:0.78rem;color:var(--color-text-muted)">{{ dev.name_en or '' }}</div>
           <div class="developer-rating">
             {% for i in range(5) %}
@@ -139,14 +139,23 @@ window.addEventListener('load', function() {
   const ctx = document.getElementById('market-chart');
   if (!ctx) return;
 
-  const labels = {{ developers | map(attribute='name_ar') | map('truncate', 12, true, '...') | list | tojson }};
+  const labelsAr = {{ developers | map(attribute='name_ar') | list | tojson }};
+  const labelsEn = {{ developers | map(attribute='name_en') | list | tojson }};
+  const truncateLabels = labels => labels.map(name => {
+    const label = String(name || '');
+    return label.length > 12 ? `${label.slice(0, 9)}...` : label;
+  });
+  const chartLabelsAr = truncateLabels(labelsAr);
+  const chartLabelsEn = truncateLabels(labelsEn.map((name, index) => name || labelsAr[index]));
   const data   = {{ developers | map(attribute='market_share_pct') | list | tojson }};
-  const colors = ['#c9a84c','#10b981','#3b82f6','#f97316','#a78bfa','#f43f5e','#06b6d4'];
+  const colors = ['#c9a84c', '#2e8b70', '#4f76ad', '#d07855', '#8870b1'];
+  const legendColor = () => getComputedStyle(document.documentElement)
+    .getPropertyValue('--color-text-secondary').trim();
 
   new Chart(ctx, {
     type: 'doughnut',
     data: {
-      labels: labels,
+      labels: document.documentElement.lang === 'en' ? chartLabelsEn : chartLabelsAr,
       datasets: [{
         data: data,
         backgroundColor: colors.map(c => c + 'cc'),
@@ -162,7 +171,7 @@ window.addEventListener('load', function() {
       plugins: {
         legend: {
           position: 'bottom',
-          labels: { color: '#94a3b8', font: { family: 'Tajawal', size: 11 }, boxWidth: 12, padding: 8 },
+          labels: { color: legendColor(), font: { family: 'Tajawal', size: 11 }, boxWidth: 12, padding: 8 },
         },
         tooltip: {
           backgroundColor: '#1e293b',
@@ -177,6 +186,15 @@ window.addEventListener('load', function() {
         },
       },
     },
+  });
+  const marketChart = Chart.getChart(ctx);
+  window.addEventListener('aqar-language-change', event => {
+    marketChart.data.labels = event.detail.language === 'en' ? chartLabelsEn : chartLabelsAr;
+    marketChart.update('none');
+  });
+  document.addEventListener('aqar-theme-change', () => {
+    marketChart.options.plugins.legend.labels.color = legendColor();
+    marketChart.update('none');
   });
 });
 </script>

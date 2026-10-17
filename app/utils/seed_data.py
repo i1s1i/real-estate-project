@@ -211,8 +211,10 @@ def seed_database():
     # Seed developers
     developers = []
     for data in DEVELOPERS_DATA:
-        d = Developer(**data)
-        db.session.add(d)
+        d = Developer.query.filter_by(name_ar=data['name_ar']).order_by(Developer.id.asc()).first()
+        if d is None:
+            d = Developer(**data)
+            db.session.add(d)
         developers.append(d)
     db.session.commit()
 

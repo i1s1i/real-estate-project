@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#111111">
+  <meta name="theme-color" content="#0b1220">
   <meta name="description" content="{% block meta_description %}منصة العقار الذكية - الرياض: تحليل بيانات السوق العقاري بالذكاء الاصطناعي والخرائط التفاعلية{% endblock %}">
   <title>{% block title %}منصة العقار الذكي - الرياض{% endblock %}</title>
 
@@ -14,10 +14,9 @@
   <meta property="og:locale" content="ar_SA">
   <meta name="twitter:card" content="summary_large_image">
 
-  <!-- Preload critical fonts -->
-  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;800&display=swap" as="style">
-
-  <!-- Fonts -->
+  <!-- Preconnect to font origins -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
   <!-- Font Awesome -->
@@ -31,11 +30,11 @@
 
   {% block extra_head %}{% endblock %}
 </head>
-<body>
+<body style="padding-top: calc(var(--navbar-height) + 1.25rem);">
 
 <!-- Noscript Fallback -->
 <noscript>
-  <div style="background:#d4a942;color:#050505;padding:1rem;text-align:center;font-family:'Tajawal',sans-serif;font-weight:700;position:fixed;top:0;left:0;right:0;z-index:99999">
+  <div style="background:#e6c364;color:#0a0f1e;padding:1rem;text-align:center;font-family:'Tajawal',sans-serif;font-weight:700;position:fixed;top:0;left:0;right:0;z-index:99999">
     ⚠️ يرجى تفعيل JavaScript لتجربة كاملة على منصة العقار الذكي
   </div>
 </noscript>
@@ -48,21 +47,21 @@
   </div>
 </div>
 
-<!-- Navbar -->
+<!-- Floating Luxury Glass Navbar (Stitch PropTech) -->
 <nav class="navbar" id="navbar">
   <div class="navbar-inner">
     <a href="{{ url_for('pages.index') }}" class="navbar-brand">
       <div class="brand-icon">🏢</div>
-      <div class="brand-text">عقار<span>ذكي</span></div>
+      <div class="brand-text">عقار <span class="logo-highlight" style="color:var(--color-accent-primary);margin-right:2px">ذكي</span></div>
     </a>
 
     <ul class="navbar-nav" id="nav-links">
-      <li><a href="{{ url_for('pages.index') }}" class="nav-link"><i class="fas fa-home"></i> <span class="lang-text" data-ar="الرئيسية" data-en="Home">الرئيسية</span></a></li>
-      <li><a href="{{ url_for('pages.map_view') }}" class="nav-link"><i class="fas fa-map"></i> <span class="lang-text" data-ar="الخريطة" data-en="Map">الخريطة</span></a></li>
-      <li><a href="{{ url_for('pages.properties') }}" class="nav-link"><i class="fas fa-building"></i> <span class="lang-text" data-ar="العقارات" data-en="Properties">العقارات</span></a></li>
-      <li><a href="{{ url_for('pages.compare') }}" class="nav-link"><i class="fas fa-chart-bar"></i> <span class="lang-text" data-ar="المقارنة" data-en="Compare">المقارنة</span></a></li>
-      <li><a href="{{ url_for('pages.statistics') }}" class="nav-link"><i class="fas fa-chart-pie"></i> <span class="lang-text" data-ar="الإحصائيات" data-en="Statistics">الإحصائيات</span></a></li>
-      <li><a href="{{ url_for('pages.developers') }}" class="nav-link"><i class="fas fa-hard-hat"></i> <span class="lang-text" data-ar="المطورون" data-en="Developers">المطورون</span></a></li>
+      <li><a href="{{ url_for('pages.index') }}" class="nav-link {{ 'active' if request.endpoint == 'pages.index' }}"><i class="fas fa-home"></i> <span class="lang-text" data-ar="الرئيسية" data-en="Home">الرئيسية</span></a></li>
+      <li><a href="{{ url_for('pages.map_view') }}" class="nav-link {{ 'active' if request.endpoint == 'pages.map_view' }}"><i class="fas fa-map"></i> <span class="lang-text" data-ar="الخريطة" data-en="Map">الخريطة</span></a></li>
+      <li><a href="{{ url_for('pages.properties') }}" class="nav-link {{ 'active' if request.endpoint == 'pages.properties' }}"><i class="fas fa-building"></i> <span class="lang-text" data-ar="العقارات" data-en="Properties">العقارات</span></a></li>
+      <li><a href="{{ url_for('pages.compare') }}" class="nav-link {{ 'active' if request.endpoint == 'pages.compare' }}"><i class="fas fa-chart-bar"></i> <span class="lang-text" data-ar="المقارنة" data-en="Compare">المقارنة</span></a></li>
+      <li><a href="{{ url_for('pages.statistics') }}" class="nav-link {{ 'active' if request.endpoint == 'pages.statistics' }}"><i class="fas fa-chart-pie"></i> <span class="lang-text" data-ar="الإحصائيات" data-en="Statistics">الإحصائيات</span></a></li>
+      <li><a href="{{ url_for('pages.developers') }}" class="nav-link {{ 'active' if request.endpoint == 'pages.developers' }}"><i class="fas fa-hard-hat"></i> <span class="lang-text" data-ar="المطورون" data-en="Developers">المطورون</span></a></li>
     </ul>
 
     <div class="navbar-actions">
@@ -77,7 +76,7 @@
       <a href="{{ url_for('pages.map_view') }}" class="btn btn-primary btn-sm btn-interactive"><i class="fas fa-map-marked-alt"></i> <span class="lang-text" data-ar="الخريطة" data-en="Map">الخريطة</span></a>
     </div>
     
-    <button class="menu-toggle" id="menu-toggle" aria-label="القائمة">
+    <button class="menu-toggle" id="menu-toggle" aria-label="القائمة" aria-controls="nav-links" aria-expanded="false">
       <span></span><span></span><span></span>
     </button>
   </div>
@@ -164,6 +163,110 @@
   </div>
 </footer>
 {% endblock %}
+
+<!-- Property Details Modal -->
+<div id="propertyDetailsModal" class="property-modal-overlay" onclick="if(event.target===this) closePropertyModal()">
+  <div class="property-modal-card">
+    <div class="property-modal-media">
+      <img id="modalPropertyImg" src="" alt="صورة العقار">
+      <div style="position:absolute;top:1rem;right:1rem;display:flex;gap:0.5rem;align-items:center;z-index:2">
+        <span id="modalPropertyListingBadge" class="badge"></span>
+        <span id="modalPropertyTypeBadge" class="badge" style="background:rgba(0,0,0,0.6);color:#ffffff"></span>
+      </div>
+      <button class="property-modal-close" onclick="closePropertyModal()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="property-modal-content">
+      <div class="property-modal-header">
+        <div>
+          <h2 id="modalPropertyTitle" class="property-modal-title"></h2>
+          <p id="modalPropertyLocation" style="color:var(--color-text-secondary);font-size:0.88rem;margin-top:0.35rem">
+            <i class="fas fa-map-marker-alt" style="color:var(--color-accent-primary)"></i> <span id="modalNeighborhoodName"></span>
+          </p>
+        </div>
+        <div style="text-align:left">
+          <div id="modalPropertyPrice" class="property-modal-price"></div>
+          <div id="modalPriceSubtitle" style="font-size:0.75rem;color:var(--color-text-muted)"></div>
+        </div>
+      </div>
+
+      <div class="property-specs-grid">
+        <div class="property-spec-item">
+          <span class="label">نوع العقار</span>
+          <span class="val" id="modalPropertyType"><i class="fas fa-home" style="color:var(--color-accent-primary)"></i> -</span>
+        </div>
+        <div class="property-spec-item">
+          <span class="label">نوع العرض</span>
+          <span class="val" id="modalPropertyListing"><i class="fas fa-tag" style="color:var(--color-accent-primary)"></i> -</span>
+        </div>
+        <div class="property-spec-item">
+          <span class="label">المساحة الإجمالية</span>
+          <span class="val" id="modalPropertyArea"><i class="fas fa-ruler-combined" style="color:var(--color-accent-primary)"></i> -</span>
+        </div>
+        <div class="property-spec-item">
+          <span class="label">سعر المتر المربع</span>
+          <span class="val" id="modalPropertyMeterPrice"><i class="fas fa-chart-line" style="color:var(--color-accent-primary)"></i> -</span>
+        </div>
+        <div class="property-spec-item" id="modalBedroomsWrap">
+          <span class="label">غرف النوم</span>
+          <span class="val" id="modalPropertyBedrooms"><i class="fas fa-bed" style="color:var(--color-accent-primary)"></i> -</span>
+        </div>
+        <div class="property-spec-item" id="modalBathroomsWrap">
+          <span class="label">دورات المياه</span>
+          <span class="val" id="modalPropertyBathrooms"><i class="fas fa-bath" style="color:var(--color-accent-primary)"></i> -</span>
+        </div>
+      </div>
+
+      <div style="margin:1rem 0">
+        <h4 style="font-size:0.95rem;margin-bottom:0.5rem"><i class="fas fa-info-circle" style="color:var(--color-accent-primary)"></i> تفاصيل ومميزات العقار</h4>
+        <p id="modalPropertyDescription" style="color:var(--color-text-secondary);font-size:0.9rem;line-height:1.7"></p>
+      </div>
+
+      <div class="property-modal-actions">
+        <a id="modalMapLink" href="#" class="btn btn-primary btn-interactive" style="flex:1;justify-content:center">
+          <i class="fas fa-map-marked-alt"></i> تحديد على الخريطة التفاعلية
+        </a>
+        <button onclick="sharePropertyDetails()" class="btn btn-secondary btn-interactive">
+          <i class="fas fa-share-alt"></i> مشاركة
+        </button>
+        <button onclick="simulateContactAgent()" class="btn btn-ghost btn-interactive">
+          <i class="fas fa-phone-alt"></i> تواصل / استفسار
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- AI Real Estate Assistant Floating FAB -->
+<button class="ai-advisor-fab btn-interactive" id="aiAdvisorFab" onclick="toggleAIChat()" title="مستشار عقار ذكي التفاعلي" aria-label="مستشار عقار ذكي">
+  <span class="pulse-dot"></span>
+  <i class="fas fa-robot"></i>
+  <span>مستشار عقار ذكي</span>
+</button>
+
+<!-- AI Chat Drawer -->
+<div id="aiChatDrawer" class="ai-chat-drawer">
+  <div class="ai-chat-header">
+    <h4><i class="fas fa-robot" style="color:var(--color-accent-primary)"></i> مستشار عقار ذكي (AI Advisor)</h4>
+    <button onclick="toggleAIChat()" aria-label="إغلاق المستشار" style="background:none;border:none;color:var(--color-text-muted);cursor:pointer;font-size:1.1rem"><i class="fas fa-times"></i></button>
+  </div>
+  <div class="ai-chat-messages" id="aiChatMessages">
+    <div class="chat-bubble bot">
+      مرحباً بك! أنا مستشارك العقاري الذكي في الرياض. يمكنك سؤالي عن:
+      <br>• أفضل الأحياء السكنية والاستثمارية
+      <br>• مقارنة الخدمات والأسعار بين الأحياء
+      <br>• البحث عن فلل أو شقق تناسب ميزانيتك
+    </div>
+  </div>
+  <div class="ai-quick-prompts">
+    <button class="quick-prompt-btn" onclick="sendQuickPrompt('قارن بين حي حطين وحي الملقا')">قارن حطين والملقا</button>
+    <button class="quick-prompt-btn" onclick="sendQuickPrompt('ما أفضل الأحياء للعائلات؟')">أفضل الأحياء للعائلات</button>
+    <button class="quick-prompt-btn" onclick="sendQuickPrompt('أرخص الفلل المتاحة للبيع')">أرخص الفلل</button>
+  </div>
+  <form id="aiChatForm" class="ai-chat-input-bar" onsubmit="handleAIChatSubmit(event)">
+    <input type="text" id="aiChatInput" placeholder="اكتب استفسارك هنا..." autocomplete="off">
+    <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-paper-plane"></i></button>
+  </form>
+</div>
 
 <!-- Scripts -->
 <script src="{{ url_for('static', filename='js/interactions.js') }}" defer></script>

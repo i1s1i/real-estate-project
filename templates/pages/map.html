@@ -102,7 +102,7 @@
       <button onclick="flyToNeighborhood({{ n.center_lat }}, {{ n.center_lng }})"
         class="btn btn-ghost" style="width:100%;text-align:right;margin-bottom:0.35rem;font-size:0.8rem;padding:0.4rem 0.75rem;justify-content:flex-start">
         <i class="fas fa-location-arrow" style="color:var(--color-accent-primary);font-size:0.7rem"></i>
-        {{ n.name_ar }}
+        <span data-ar="{{ n.name_ar }}" data-en="{{ n.name_en }}">{{ n.name_ar }}</span>
       </button>
       {% endif %}
       {% endfor %}

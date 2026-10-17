@@ -10,12 +10,21 @@ let parksLayer = null;
 let eventsLayer = null;
 let currentBaseTile = null;
 let propertyList = [];
+const mapEnglish = () => document.documentElement.getAttribute('lang') === 'en';
+const mapLocalName = (nameAr, nameEn) => mapEnglish() && nameEn ? nameEn : nameAr;
+const escapeMapText = value => String(value || '').replace(/[&<>"']/g, character => ({
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;',
+}[character]));
 
 // ── Tile Layer Definitions ──────────────────────────────────
 const TILE_LAYERS = {
-  dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    attribution: '&copy; CARTO | &copy; OpenStreetMap',
-    subdomains: 'abcd',
+  dark: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors',
+    className: 'dark-map-tiles',
     maxZoom: 19,
   }),
   satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
@@ -32,6 +41,36 @@ const TILE_LAYERS = {
   }),
 };
 
+let markersById = {};
+
+// ── Pluralization Helpers ────────────────────────────────────
+function formatPluralHospitals(count) {
+  count = parseInt(count, 10) || 0;
+  if (count === 0) return 'لا توجد مستشفيات';
+  if (count === 1) return 'مستشفى واحد';
+  if (count === 2) return 'مستشفيان';
+  if (count >= 3 && count <= 10) return `${count} مستشفيات`;
+  return `${count} مستشفى`;
+}
+
+function formatPluralSchools(count) {
+  count = parseInt(count, 10) || 0;
+  if (count === 0) return 'لا توجد مدارس';
+  if (count === 1) return 'مدرسة واحدة';
+  if (count === 2) return 'مدرستان';
+  if (count >= 3 && count <= 10) return `${count} مدارس`;
+  return `${count} مدرسة`;
+}
+
+function formatPluralParks(count) {
+  count = parseInt(count, 10) || 0;
+  if (count === 0) return 'لا توجد حدائق';
+  if (count === 1) return 'حديقة واحدة';
+  if (count === 2) return 'حديقتان';
+  if (count >= 3 && count <= 10) return `${count} حدائق`;
+  return `${count} حديقة`;
+}
+
 // ── Initialize Map ──────────────────────────────────────────
 function initMap() {
   map = L.map('map', {
@@ -46,6 +85,14 @@ function initMap() {
   // Default tile layer
   currentBaseTile = TILE_LAYERS.dark;
   currentBaseTile.addTo(map);
+
+  // Ensure map container renders properly without grey tiles
+  setTimeout(() => {
+    if (map) map.invalidateSize();
+  }, 300);
+  window.addEventListener('resize', () => {
+    if (map) map.invalidateSize();
+  });
 
   // Initialize layers
   markersLayer = L.layerGroup().addTo(map);
@@ -106,8 +153,8 @@ async function loadNeighborhoods() {
       });
 
       layer.bindPopup(`
-        <div class="map-popup" dir="rtl">
-          <h4>${props.name_ar}</h4>
+        <div class="map-popup lang-dir" dir="rtl">
+          <h4><span data-ar="${escapeMapText(props.name_ar)}" data-en="${escapeMapText(props.name_en || props.name_ar)}">${escapeMapText(mapLocalName(props.name_ar, props.name_en))}</span></h4>
           <div style="display:flex;justify-content:space-between;margin-bottom:8px">
             <span style="color:#94a3b8;font-size:0.8rem">درجة البنية التحتية</span>
             <strong style="color:${color}">${score}%</strong>
@@ -121,7 +168,7 @@ async function loadNeighborhoods() {
           </p>
           <p style="color:#94a3b8;font-size:0.8rem">
             <i class="fas fa-tree" style="color:#10b981;margin-left:4px"></i>
-            الحدائق: ${props.parks_count || 0} | المستشفيات: ${props.hospitals_count || 0}
+            ${formatPluralParks(props.parks_count)} · <i class="fas fa-hospital" style="color:#3b82f6;margin-left:4px"></i> ${formatPluralHospitals(props.hospitals_count)}
           </p>
           <button onclick="flyToNeighborhood(${props.center_lat},${props.center_lng})"
             style="margin-top:10px;width:100%;padding:6px;background:linear-gradient(135deg,#c9a84c,#e0b860);
@@ -163,8 +210,8 @@ async function loadParks() {
 
           const marker = L.marker([props.center_lat, props.center_lng], { icon });
           marker.bindPopup(`
-            <div class="map-popup" dir="rtl">
-              <h4 style="color:#10b981">${props.name_ar}</h4>
+            <div class="map-popup lang-dir" dir="rtl">
+              <h4 style="color:#10b981"><span data-ar="${escapeMapText(props.name_ar)}" data-en="${escapeMapText(props.name_en || props.name_ar)}">${escapeMapText(mapLocalName(props.name_ar, props.name_en))}</span></h4>
               <p style="color:#94a3b8;font-size:0.8rem">النوع: ${props.park_type === 'walkway' ? 'ممشى' : props.park_type === 'garden' ? 'حديقة' : 'متنزه'}</p>
               <p style="color:#94a3b8;font-size:0.8rem">المساحة: ${(props.area_sqm || 0).toLocaleString('ar-SA')} م²</p>
               <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
@@ -188,12 +235,12 @@ async function loadParks() {
 
 function addMajorParks() {
   const majorParks = [
-    { name: 'متنزه السلام', lat: 24.7230, lng: 46.6810, size: 42, emoji: '🌿' },
-    { name: 'حديقة الملك سلمان', lat: 24.7136, lng: 46.7253, size: 40, emoji: '🌿' },
-    { name: 'ممشى الغدير', lat: 24.7788, lng: 46.7088, size: 28, emoji: '🏃' },
-    { name: 'مسار الملك عبد الله', lat: 24.7600, lng: 46.6900, size: 30, emoji: '🚶' },
-    { name: 'الحديقة الشاملة', lat: 24.8000, lng: 46.6500, size: 24, emoji: '🌸' },
-    { name: 'حديقة الملقا', lat: 24.8288, lng: 46.6388, size: 20, emoji: '🌺' },
+    { name: 'متنزه السلام', nameEn: 'Al Salam Park', lat: 24.7230, lng: 46.6810, size: 42, emoji: '🌿' },
+    { name: 'حديقة الملك سلمان', nameEn: 'King Salman Park', lat: 24.7136, lng: 46.7253, size: 40, emoji: '🌿' },
+    { name: 'ممشى الغدير', nameEn: 'Al Ghadir Walkway', lat: 24.7788, lng: 46.7088, size: 28, emoji: '🏃' },
+    { name: 'مسار الملك عبد الله', nameEn: 'King Abdullah Path', lat: 24.7600, lng: 46.6900, size: 30, emoji: '🚶' },
+    { name: 'الحديقة الشاملة', nameEn: 'Comprehensive Park', lat: 24.8000, lng: 46.6500, size: 24, emoji: '🌸' },
+    { name: 'حديقة الملقا', nameEn: 'Al Malqa Park', lat: 24.8288, lng: 46.6388, size: 20, emoji: '🌺' },
   ];
 
   majorParks.forEach(park => {
@@ -205,7 +252,7 @@ function addMajorParks() {
       weight: 2,
       opacity: 0.6,
     });
-    circle.bindTooltip(`${park.emoji} ${park.name}`, {
+    circle.bindTooltip(`${park.emoji} ${mapLocalName(park.name, park.nameEn)}`, {
       permanent: false,
       direction: 'top',
       className: 'park-tooltip',
@@ -233,7 +280,7 @@ function loadEvents() {
     });
 
     const marker = L.marker([venue.lat, venue.lng], { icon });
-    marker.bindPopup(`<div class="map-popup" dir="rtl"><h4>${venue.name_ar}</h4><p style="color:#94a3b8;font-size:0.8rem">${venue.name_en}</p><p style="color:#c9a84c;font-size:0.75rem;margin-top:6px">مقر فعاليات ومناسبات</p></div>`, { maxWidth: 220, className: 'custom-popup' });
+    marker.bindPopup(`<div class="map-popup lang-dir" dir="rtl"><h4><span data-ar="${escapeMapText(venue.name_ar)}" data-en="${escapeMapText(venue.name_en)}">${escapeMapText(mapLocalName(venue.name_ar, venue.name_en))}</span></h4><p style="color:#94a3b8;font-size:0.8rem">${venue.name_en}</p><p style="color:#c9a84c;font-size:0.75rem;margin-top:6px">مقر فعاليات ومناسبات</p></div>`, { maxWidth: 220, className: 'custom-popup' });
     eventsLayer.addLayer(marker);
   });
 }
@@ -289,7 +336,7 @@ function loadMetro() {
       lineCap: 'round',
       lineJoin: 'round',
     });
-    polyline.bindTooltip(`${line.name_ar} — ${line.name_en}`, { sticky: true, className: 'park-tooltip' });
+    polyline.bindTooltip(mapLocalName(line.name_ar, line.name_en), { sticky: true, className: 'park-tooltip' });
     metroLayer.addLayer(polyline);
   });
 }
@@ -304,6 +351,7 @@ async function loadProperties(filters = {}) {
     if (!data.success) return;
 
     markersLayer.clearLayers();
+    markersById = {};
     propertyList = data.data;
 
     // Update sidebar list
@@ -314,41 +362,54 @@ async function loadProperties(filters = {}) {
 
       const isVilla = prop.property_type === 'villa';
       const isSale = prop.listing_type === 'sale';
-      const color = isSale ? '#c9a84c' : '#10b981';
+      const color = isSale ? '#d4a942' : '#2563eb';
       const emoji = isVilla ? '🏠' : prop.property_type === 'apartment' ? '🏢' : prop.property_type === 'land' ? '🗺️' : '🏪';
 
       const icon = L.divIcon({
         className: '',
-        html: `<div style="background:${color};width:34px;height:34px;border-radius:50% 50% 50% 0;
+        html: `<div style="background:${color};width:36px;height:36px;border-radius:50% 50% 50% 0;
           transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;
-          border:2px solid rgba(255,255,255,0.3);box-shadow:0 2px 8px rgba(0,0,0,0.4)">
-          <span style="transform:rotate(45deg);font-size:14px">${emoji}</span>
+          border:2px solid rgba(255,255,255,0.8);box-shadow:0 3px 10px rgba(0,0,0,0.5);cursor:pointer">
+          <span style="transform:rotate(45deg);font-size:15px">${emoji}</span>
         </div>`,
-        iconSize: [34, 34],
-        iconAnchor: [17, 34],
-        popupAnchor: [0, -34],
+        iconSize: [36, 36],
+        iconAnchor: [18, 36],
+        popupAnchor: [0, -36],
       });
 
       const marker = L.marker([prop.lat, prop.lng], { icon });
       marker.bindPopup(`
         <div class="map-popup" dir="rtl" style="font-family:Tajawal,sans-serif">
-          <h4 style="font-size:0.9rem;margin-bottom:6px;color:#f8fafc">${prop.title}</h4>
-          <div class="price" style="font-size:1.1rem;font-weight:800;color:#c9a84c;margin-bottom:8px">
+          <h4 style="font-size:0.95rem;margin-bottom:6px;color:#f8fafc;font-weight:700">${prop.title}</h4>
+          <div class="price" style="font-size:1.15rem;font-weight:800;color:var(--color-accent-primary);margin-bottom:8px">
             ${prop.price_formatted}
           </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
-            <span style="background:rgba(255,255,255,0.08);border-radius:20px;padding:2px 8px;font-size:0.75rem;color:#94a3b8">
-              ${prop.listing_type === 'sale' ? '🏷️ للبيع' : '🔑 للإيجار'}
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+            <span class="badge ${isSale ? 'badge-sale' : 'badge-rent'}">
+              ${isSale ? '🏷️ للبيع' : '🔑 للإيجار السنوي'}
             </span>
-            ${prop.bedrooms ? `<span style="background:rgba(255,255,255,0.08);border-radius:20px;padding:2px 8px;font-size:0.75rem;color:#94a3b8">🛏️ ${prop.bedrooms} غرف</span>` : ''}
-            ${prop.area_sqm ? `<span style="background:rgba(255,255,255,0.08);border-radius:20px;padding:2px 8px;font-size:0.75rem;color:#94a3b8">📐 ${prop.area_sqm} م²</span>` : ''}
+            ${prop.bedrooms ? `<span style="background:rgba(255,255,255,0.08);border-radius:20px;padding:2px 8px;font-size:0.75rem;color:#cbd5e1">🛏️ ${prop.bedrooms} غرف</span>` : ''}
+            ${prop.area_sqm ? `<span style="background:rgba(255,255,255,0.08);border-radius:20px;padding:2px 8px;font-size:0.75rem;color:#cbd5e1">📐 ${prop.area_sqm} م²</span>` : ''}
           </div>
-          ${prop.neighborhood_name ? `<p style="color:#94a3b8;font-size:0.78rem">📍 ${prop.neighborhood_name}</p>` : ''}
+          ${prop.neighborhood_name ? `<p style="color:#94a3b8;font-size:0.8rem;margin-bottom:8px">📍 ${prop.neighborhood_name}</p>` : ''}
+          <button onclick="openPropertyModalById(${prop.id})" class="btn btn-primary btn-sm btn-interactive" style="width:100%;justify-content:center;font-size:0.82rem;font-weight:700">
+            <i class="fas fa-info-circle"></i> تفاصيل العقار الكاملة
+          </button>
         </div>
-      `, { maxWidth: 260, className: 'custom-popup' });
+      `, { maxWidth: 280, className: 'custom-popup' });
 
+      markersById[prop.id] = marker;
       markersLayer.addLayer(marker);
     });
+
+    // Check if URL has a target property to highlight
+    const urlParams = new URLSearchParams(window.location.search);
+    const targetPropId = parseInt(urlParams.get('prop_id'), 10);
+    if (targetPropId && markersById[targetPropId]) {
+      setTimeout(() => {
+        flyToPropertyId(targetPropId);
+      }, 400);
+    }
   } catch (err) {
     console.error('Error loading properties:', err);
   }
@@ -364,14 +425,22 @@ function updateSidebarList(properties) {
     return;
   }
 
-  list.innerHTML = properties.slice(0, 30).map(p => `
-    <div class="map-list-item" onclick="flyToProperty(${p.lat}, ${p.lng})">
+  list.innerHTML = properties.slice(0, 40).map(p => `
+    <div class="map-list-item" onclick="flyToPropertyId(${p.id})">
       <h4>${p.title}</h4>
       <div class="price">${p.price_formatted}</div>
       <div class="meta">
-        ${p.listing_type === 'sale' ? '🏷️ للبيع' : '🔑 للإيجار'}
-        ${p.bedrooms ? ` · 🛏️ ${p.bedrooms}` : ''}
+        ${p.listing_type === 'sale' ? '🏷️ للبيع' : '🔑 للإيجار السنوي'}
+        ${p.bedrooms ? ` · 🛏️ ${p.bedrooms} غرف` : ''}
         ${p.area_sqm ? ` · 📐 ${p.area_sqm} م²` : ''}
+      </div>
+      <div style="margin-top:0.6rem;display:flex;gap:0.4rem" onclick="event.stopPropagation()">
+        <button onclick="openPropertyModalById(${p.id})" class="btn btn-primary btn-sm btn-interactive" style="flex:1;padding:0.3rem 0.5rem;font-size:0.75rem;justify-content:center">
+          <i class="fas fa-eye"></i> التفاصيل
+        </button>
+        <button onclick="flyToPropertyId(${p.id})" class="btn btn-ghost btn-sm btn-interactive" style="flex:1;padding:0.3rem 0.5rem;font-size:0.75rem;justify-content:center">
+          <i class="fas fa-map-marker-alt"></i> تحديد
+        </button>
       </div>
     </div>
   `).join('');
@@ -387,6 +456,20 @@ function flyToProperty(lat, lng) {
   map.flyTo([lat, lng], 16, { duration: 0.8 });
 }
 window.flyToProperty = flyToProperty;
+
+function flyToPropertyId(propId) {
+  const marker = markersById[propId];
+  const prop = propertyList.find(p => p.id === propId);
+  if (marker && prop) {
+    map.flyTo([prop.lat, prop.lng], 16, { duration: 1.0 });
+    setTimeout(() => {
+      marker.openPopup();
+    }, 1050);
+  } else if (prop) {
+    map.flyTo([prop.lat, prop.lng], 16, { duration: 1.0 });
+  }
+}
+window.flyToPropertyId = flyToPropertyId;
 
 // ── Toggle Layers ────────────────────────────────────────────
 function toggleLayer(layerName) {

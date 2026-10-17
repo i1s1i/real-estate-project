@@ -67,3 +67,20 @@ Then navigate to `http://127.0.0.1:5000` in your web browser.
 - [ ] Implement user authentication for saving favorite properties.
 - [ ] Add automated unit and integration testing.
 - [ ] Containerize the application using Docker.
+
+## Browser Tests
+
+The Playwright browser suite starts an isolated Flask server with its own temporary,
+seeded SQLite database. It does not use or modify the local application database.
+
+Install the test dependencies and Chromium, then run the suite:
+```bash
+pip install -r requirements-test.txt
+playwright install chromium
+pytest
+```
+
+The tests cover the main pages, property search and details, neighborhood comparison,
+map controls, responsive navigation, saved display preferences, admin login, mobile
+horizontal overflow, and a 5-second homepage rendering budget. The homepage map preview
+is a lightweight inline illustration; Leaflet remains limited to the interactive map page.
