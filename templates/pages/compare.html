@@ -58,22 +58,22 @@
 
   <!-- Charts -->
   <div id="charts-section" style="display:none;margin-top:2rem">
-    <div class="grid" style="grid-template-columns:1fr 1fr;gap:1.5rem">
-      <div class="chart-container" data-reveal>
+    <div class="grid" style="grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:1.5rem">
+      <div class="chart-container" data-reveal style="max-height:420px;overflow:hidden">
         <h3 style="font-size:1rem;margin-bottom:1rem">
           <i class="fas fa-chart-line" style="color:var(--color-accent-primary)"></i>
           تطور سعر المتر المربع (ريال)
         </h3>
-        <div class="chart-wrapper">
+        <div class="chart-wrapper" style="height:320px;max-height:320px;position:relative;overflow:hidden">
           <canvas id="price-chart"></canvas>
         </div>
       </div>
-      <div class="chart-container" data-reveal data-reveal-delay="1">
+      <div class="chart-container" data-reveal data-reveal-delay="1" style="max-height:420px;overflow:hidden">
         <h3 style="font-size:1rem;margin-bottom:1rem">
           <i class="fas fa-th-large" style="color:var(--color-accent-secondary)"></i>
           مقارنة الخدمات والمرافق
         </h3>
-        <div class="chart-wrapper">
+        <div class="chart-wrapper" style="height:320px;max-height:320px;position:relative;overflow:hidden">
           <canvas id="infra-chart"></canvas>
         </div>
       </div>
@@ -117,9 +117,9 @@ async function runCompare() {
     const data = await res.json();
 
     if (data.success) {
-      renderCompareCards(data.data);
       const chartsSection = document.getElementById('charts-section');
       if (chartsSection) chartsSection.style.display = 'block';
+      renderCompareCards(data.data);
     }
   } catch (err) {
     console.error('Compare error:', err);

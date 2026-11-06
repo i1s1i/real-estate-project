@@ -2,6 +2,9 @@ from config import config as app_configs
 
 from app import create_app, db
 from app.models.developer import Developer
+from app.models.neighborhood import Neighborhood
+from app.models.park import Park
+from app.models.property import Property
 from app.utils.seed_data import seed_database
 
 
@@ -51,8 +54,21 @@ def test_reseeding_does_not_add_duplicate_developers(monkeypatch):
         with app.app_context():
             db.create_all()
             seed_database()
+            counts_after_first_seed = {
+                model.__name__: model.query.count()
+                for model in (Neighborhood, Developer, Park, Property)
+            }
             seed_database()
-            assert Developer.query.count() == 5
+            assert {
+                model.__name__: model.query.count()
+                for model in (Neighborhood, Developer, Park, Property)
+            } == counts_after_first_seed
+            assert counts_after_first_seed == {
+                "Neighborhood": 15,
+                "Developer": 5,
+                "Park": 5,
+                "Property": 500,
+            }
     finally:
         with app.app_context():
             db.session.remove()

@@ -4,11 +4,11 @@
 {% block meta_description %}تصفح جميع العقارات المتاحة للبيع والإيجار في أحياء الرياض مع إمكانية التصفية والبحث المتقدم{% endblock %}
 
 {% block content %}
-<div class="container" style="padding-top: calc(var(--navbar-height) + 2rem); padding-bottom: 3rem;">
+<div class="container properties-page" style="padding-top: calc(var(--navbar-height) + 2rem); padding-bottom: 3rem;">
 
   <!-- Header -->
   <div class="section-header" data-reveal>
-    <h1>🏠 العقارات المتاحة</h1>
+    <h1>العقارات المتاحة</h1>
     <div class="divider"></div>
     <p>
       {{ pagination.total }} عقار متاح
@@ -21,8 +21,8 @@
   <form method="GET" action="{{ url_for('pages.properties') }}">
     <div class="filters-bar" data-reveal>
       <div class="form-group">
-        <label><i class="fas fa-home" style="color:var(--color-accent-primary)"></i> نوع العقار</label>
-        <select name="type" class="form-control">
+        <label for="filter-property-type"><i class="fas fa-home" aria-hidden="true"></i> نوع العقار</label>
+        <select id="filter-property-type" name="type" class="form-control">
           <option value="">الكل</option>
           {% for val, label in [('villa','فيلا'),('apartment','شقة'),('land','أرض'),('commercial','تجاري')] %}
           <option value="{{ val }}" {{ 'selected' if filters.type == val }}>{{ label }}</option>
@@ -30,16 +30,16 @@
         </select>
       </div>
       <div class="form-group">
-        <label><i class="fas fa-key" style="color:var(--color-accent-primary)"></i> نوع العرض</label>
-        <select name="listing" class="form-control">
+        <label for="filter-listing-type"><i class="fas fa-key" aria-hidden="true"></i> نوع العرض</label>
+        <select id="filter-listing-type" name="listing" class="form-control">
           <option value="">الكل</option>
           <option value="sale" {{ 'selected' if filters.listing == 'sale' }}>للبيع</option>
           <option value="rent" {{ 'selected' if filters.listing == 'rent' }}>للإيجار</option>
         </select>
       </div>
       <div class="form-group">
-        <label><i class="fas fa-map-marker-alt" style="color:var(--color-accent-primary)"></i> الحي</label>
-        <select name="neighborhood" class="form-control">
+        <label for="filter-neighborhood"><i class="fas fa-map-marker-alt" aria-hidden="true"></i> الحي</label>
+        <select id="filter-neighborhood" name="neighborhood" class="form-control">
           <option value="">كل الأحياء</option>
           {% for n in neighborhoods %}
           <option value="{{ n.id }}" data-ar="{{ n.name_ar }}" data-en="{{ n.name_en }}" {{ 'selected' if filters.neighborhood|string == n.id|string }}>{{ n.name_ar }}</option>
@@ -62,16 +62,16 @@
     <div class="property-card card-lift" data-reveal data-reveal-delay="{{ loop.index % 4 }}" onclick="openPropertyModalById({{ prop.id }})" style="cursor:pointer">
       <div class="property-img">
         <img src="{{ prop.image_url or 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=600' }}"
-          alt="{{ prop.title }}" loading="lazy" width="600" height="400"
+          alt="صورة توضيحية من بيانات العرض التجريبية: {{ prop.title }}" loading="lazy" width="600" height="400"
           onerror="this.src='https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=600'">
         <span class="badge {{ 'badge-sale' if prop.listing_type == 'sale' else 'badge-rent' }}">
           {{ '🏷️ للبيع' if prop.listing_type == 'sale' else '🔑 للإيجار السنوي' }}
         </span>
         {% if prop.is_featured %}
-        <span class="badge badge-featured" style="top:1rem;left:1rem">⭐ مميز</span>
+        <span class="badge badge-featured">⭐ مميز</span>
         {% endif %}
-        <div class="badge" style="bottom:0.75rem;right:0.75rem;top:auto;background:rgba(0,0,0,0.65);color:#f8fafc;font-size:0.72rem">
-          {{ {'villa':'🏠 فيلا','apartment':'🏢 شقة','land':'🗺️ أرض','commercial':'🏪 تجاري'}.get(prop.property_type, prop.property_type) }}
+        <div class="badge property-type-badge">
+          {{ {'villa':'فيلا','apartment':'شقة','land':'أرض','commercial':'تجاري'}.get(prop.property_type, prop.property_type) }}
         </div>
       </div>
       <div class="property-info">

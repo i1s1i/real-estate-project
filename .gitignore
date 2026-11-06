@@ -96,3 +96,6 @@ instance/
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Local design inspection captures and reports
+.taste-skill/

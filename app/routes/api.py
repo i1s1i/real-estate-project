@@ -3,7 +3,6 @@
 """
 import hashlib
 import json
-import re
 from datetime import datetime, timezone
 from flask import Blueprint, jsonify, request, current_app
 from app.models.neighborhood import Neighborhood
@@ -11,6 +10,7 @@ from app.models.property import Property
 from app.models.developer import Developer, DeveloperProject
 from app.models.park import Park
 from app import cache, db
+from app.utils.rag_assistant import answer_query
 
 api_bp = Blueprint('api', __name__)
 
@@ -65,8 +65,19 @@ def map_neighborhoods():
     neighborhoods = Neighborhood.query.all()
     features = []
     for n in neighborhoods:
-        if n.boundaries_geojson:
-            features.append(n.to_geojson_feature())
+        try:
+            feature = n.to_geojson_feature()
+        except (json.JSONDecodeError, TypeError) as e:
+            current_app.logger.warning('Invalid GeoJSON for neighborhood %s: %s', n.id, e)
+            feature = None
+
+        if feature and not feature['geometry'] and n.center_lat is not None and n.center_lng is not None:
+            feature['geometry'] = {
+                'type': 'Point',
+                'coordinates': [n.center_lng, n.center_lat],
+            }
+        if feature and feature['geometry']:
+            features.append(feature)
 
     return jsonify({
         'success': True,
@@ -82,16 +93,24 @@ def map_parks():
     parks = Park.query.all()
     features = []
     for p in parks:
+        boundaries = None
         if p.boundaries_geojson:
             try:
                 boundaries = json.loads(p.boundaries_geojson)
-                features.append({
-                    'type': 'Feature',
-                    'geometry': boundaries,
-                    'properties': p.to_dict()
-                })
             except (json.JSONDecodeError, TypeError) as e:
-                current_app.logger.warning(f'Invalid GeoJSON for park {p.id}: {e}')
+                current_app.logger.warning('Invalid GeoJSON for park %s: %s', p.id, e)
+
+        if not boundaries and p.center_lat is not None and p.center_lng is not None:
+            boundaries = {
+                'type': 'Point',
+                'coordinates': [p.center_lng, p.center_lat],
+            }
+        if boundaries:
+            features.append({
+                'type': 'Feature',
+                'geometry': boundaries,
+                'properties': p.to_dict()
+            })
     return jsonify({
         'success': True,
         'type': 'FeatureCollection',
@@ -270,143 +289,19 @@ def _get_price_history(neighborhood):
 
 @api_bp.route('/ai/chat', methods=['POST'])
 def ai_chat():
-    """
-    مساعد عقار ذكي (AI Advisor)
-    مرحلة 1: محرك ذكي يعتمد على استرجاع البيانات الحية وتوليد إجابات تفاعلية
-    """
-    data = request.get_json() or {}
-    user_query = data.get('query', '').strip()
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({"success": False, "reply": "A JSON object is required."}), 400
 
-    if not user_query:
+    user_query = data.get("query")
+    if not isinstance(user_query, str) or not user_query.strip():
+        return jsonify({"success": False, "reply": "Enter a question to search."}), 400
+
+    user_query = user_query.strip()
+    if len(user_query) > 500:
         return jsonify({
-            'success': False,
-            'reply': 'مرحباً بك في منصة عقار ذكي! كيف يمكنني مساعدتك اليوم في سوق عقارات الرياض؟ يمكنك سؤالي عن أفضل الأحياء، أو أسعار الفلل والشقق، أو مقارنة بين منطقتين.'
-        })
+            "success": False,
+            "reply": "Questions must be 500 characters or fewer.",
+        }), 400
 
-    def normalize_search_text(value):
-        value = re.sub(r'[\u064b-\u065f\u0670]', '', value.lower())
-        return re.sub(r'[^\w]+', ' ', value).strip()
-
-    normalized_query = normalize_search_text(user_query)
-    all_neighborhoods = Neighborhood.query.all()
-    mentioned_neighborhoods = []
-    for neighborhood in all_neighborhoods:
-        arabic_name = re.sub(r'^حي\s+', '', neighborhood.name_ar.strip())
-        names = {neighborhood.name_ar, arabic_name, neighborhood.name_en}
-        positions = []
-        for name in names:
-            normalized_name = normalize_search_text(name)
-            if not normalized_name:
-                continue
-            match = re.search(
-                rf'(?<!\w){re.escape(normalized_name)}(?!\w)',
-                normalized_query,
-            )
-            if match:
-                positions.append(match.start())
-        if positions:
-            mentioned_neighborhoods.append((min(positions), neighborhood))
-    mentioned_neighborhoods = [
-        neighborhood
-        for _, neighborhood in sorted(mentioned_neighborhoods, key=lambda item: item[0])
-    ]
-
-    # Intent 1: Comparison between neighborhoods
-    if ('قارن' in user_query or 'الفرق' in user_query or 'مقارنة' in user_query) and len(mentioned_neighborhoods) >= 2:
-        comparison_rows = [
-            (
-                f"• **{neighborhood.name_ar}:** البنية التحتية "
-                f"{int(neighborhood.infrastructure_score)}/100، سعر متر الأرض "
-                f"{int(neighborhood.land_price_per_sqm):,} ريال، متوسط الإيجار "
-                f"{int(neighborhood.avg_rent_per_sqm):,} ريال/م²، "
-                f"{neighborhood.schools_count} مدارس، {neighborhood.hospitals_count} مستشفيات، "
-                f"{neighborhood.parks_count} حدائق."
-            )
-            for neighborhood in mentioned_neighborhoods
-        ]
-        best_neighborhood = max(
-            mentioned_neighborhoods,
-            key=lambda neighborhood: neighborhood.infrastructure_score,
-        )
-        comparison_details = '\n'.join(comparison_rows)
-        compared_names = ' و '.join(
-            neighborhood.name_ar for neighborhood in mentioned_neighborhoods
-        )
-        reply = (
-            f"📊 **مقارنة الأحياء: {compared_names}**\n\n"
-            f"{comparison_details}\n\n"
-            f"💡 **التوصية:** {best_neighborhood.name_ar} هو الأعلى في مؤشر البنية "
-            f"التحتية بين الأحياء المذكورة ({int(best_neighborhood.infrastructure_score)}/100). "
-            "يعتمد الاختيار الأنسب أيضاً على ميزانيتك واحتياجك للسكن أو الاستثمار."
-        )
-        return jsonify({'success': True, 'reply': reply})
-
-    # Intent 2: Specific neighborhood question
-    if mentioned_neighborhoods:
-        n = mentioned_neighborhoods[0]
-        # Count properties in this neighborhood
-        prop_count = Property.query.filter_by(neighborhood_id=n.id).count()
-        reply = (
-            f"📍 **معلومات مفصلة عن {n.name_ar}:**\n\n"
-            f"• **مؤشر البنية التحتية:** {int(n.infrastructure_score)}/100 🌟\n"
-            f"• **متوسط سعر متر الأرض:** {int(n.land_price_per_sqm):,} ريال/م²\n"
-            f"• **متوسط الإيجار السكني:** {int(n.avg_rent_per_sqm):,} ريال/م²\n"
-            f"• **المرافق العامة:** {n.schools_count} مدارس، {n.hospitals_count} مستشفيات، {n.parks_count} حدائق، و {n.malls_count} مجمعات تجارية.\n"
-            f"• **عدد العقارات المسجلة بالمنصة:** {prop_count} عقار متاح.\n\n"
-            f"يمكنك استكشاف العقارات بالحي مباشرة عبر تبويب الخريطة أو صفحة العقارات!"
-        )
-        return jsonify({'success': True, 'reply': reply})
-
-    # Intent 3: Best neighborhoods / recommendations
-    if any(k in user_query for k in ['أفضل حي', 'افضل حي', 'أعلى تقييم', 'أرقى', 'بنية تحتية', 'عائلات']):
-        top_n = Neighborhood.query.order_by(Neighborhood.infrastructure_score.desc()).limit(3).all()
-        top_list = "\n".join([f"• **{item.name_ar}:** بنية تحتية {int(item.infrastructure_score)}% - سعر المتر: {int(item.land_price_per_sqm):,} ريال" for item in top_n])
-        reply = (
-            f"🏆 **أفضل الأحياء في الرياض بناءً على تحليلات البنية التحتية والخدمات:**\n\n"
-            f"{top_list}\n\n"
-            f"تتميز هذه الأحياء بجاهزية عالية للمدارس والمراكز الصحية والحدائق ومداخل الطرق الرئيسية."
-        )
-        return jsonify({'success': True, 'reply': reply})
-
-    # Intent 4: Price / Budget search
-    prop_type = None
-    if 'فيلا' in user_query or 'فلل' in user_query:
-        prop_type = 'villa'
-    elif 'شقة' in user_query or 'شقق' in user_query:
-        prop_type = 'apartment'
-    elif 'أرض' in user_query or 'اراضي' in user_query:
-        prop_type = 'land'
-
-    listing_type = 'rent' if ('إيجار' in user_query or 'ايجار' in user_query) else 'sale' if ('بيع' in user_query or 'شراء' in user_query) else None
-
-    # Filter properties if type detected
-    if prop_type or listing_type:
-        query_filter = Property.query
-        if prop_type:
-            query_filter = query_filter.filter_by(property_type=prop_type)
-        if listing_type:
-            query_filter = query_filter.filter_by(listing_type=listing_type)
-
-        props = query_filter.order_by(Property.price.asc()).limit(3).all()
-        if props:
-            p_list = "\n".join([f"• **{p.title}:** بسعر {p.price_formatted()} في {p.neighborhood.name_ar if p.neighborhood else 'الرياض'}" for p in props])
-            type_name = {'villa': 'الفلل', 'apartment': 'الشقق', 'land': 'الأراضي'}.get(prop_type, 'العقارات')
-            listing_name = 'المتاحة للإيجار' if listing_type == 'rent' else 'المتاحة للبيع' if listing_type == 'sale' else 'المتاحة'
-            reply = (
-                f"🏡 **أبرز عروض {type_name} {listing_name}:**\n\n"
-                f"{p_list}\n\n"
-                f"اضغط على أي عقار في صفحة العقارات أو الخريطة لاستعراض تفاصيله الكاملة والتواصل!"
-            )
-            return jsonify({'success': True, 'reply': reply})
-
-    # Default fallback answer
-    reply = (
-        "🤖 **أهلاً بك! أنا مساعد عقار ذكي التفاعلي.**\n\n"
-        "أستطيع مساعدتك في الاستفسار عن:\n"
-        "1. **مقارنة الأحياء:** مثل: *قارن بين حي حطين وحي الملقا*\n"
-        "2. **استعراض حي معين:** مثل: *ما هي مميزات حي الياسمين؟*\n"
-        "3. **أفضل الفرص الاستثمارية:** مثل: *ما هي أفضل الأحياء للعائلات؟*\n"
-        "4. **البحث في الأسعار:** مثل: *أرخص الفلل المتاحة للبيع*\n\n"
-        "جرّب طرح سؤالك باللغة العربية وسأجيبك فوراً بالاعتماد على قاعدة بيانات السوق!"
-    )
-    return jsonify({'success': True, 'reply': reply})
+    return jsonify(answer_query(user_query))

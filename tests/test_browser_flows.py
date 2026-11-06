@@ -26,6 +26,43 @@ def test_primary_pages_render(site_page, live_server, path, marker):
     assert site_page.locator("nav#navbar a.nav-link.active").count() == 1
 
 
+def test_statistics_page_shows_official_q3_data_and_discloses_limits(site_page, live_server):
+    site_page.goto(f"{live_server}/statistics", wait_until="domcontentloaded")
+    site_page.evaluate("localStorage.setItem('lang', 'ar')")
+    site_page.reload(wait_until="domcontentloaded")
+
+    expect(site_page.locator("main h1")).to_have_text("مؤشر أسعار العقارات")
+    expect(site_page.locator(".market-kpi-value")).to_have_count(4)
+    assert site_page.locator(".market-kpi-value").all_inner_texts() == [
+        "+1.2%",
+        "+4.6%",
+        "+2.3%",
+        "-1.2%",
+    ]
+    assert site_page.locator(".market-sector-row strong").all_inner_texts() == [
+        "+2.3%",
+        "-2.0%",
+        "+3.9%",
+    ]
+    expect(site_page.locator(".market-types-table")).to_contain_text("-7.7%")
+    expect(site_page.locator(".market-data-limit")).to_contain_text("حجم الطلب")
+
+    source_link = site_page.locator(".statistics-source-link")
+    expect(source_link).to_have_attribute("href", re.compile(r"stats\.gov\.sa/.+RPI\+Q3\+2026"))
+    expect(source_link).to_have_attribute("target", "_blank")
+    expect(site_page.locator("canvas")).to_have_count(0)
+    page_text = site_page.locator("main").inner_text()
+    for unsupported_value in ("+45%", "1,200+", "8.5%"):
+        assert unsupported_value not in page_text
+
+    site_page.locator("#langToggle").click()
+    expect(site_page.locator("html")).to_have_attribute("lang", "en")
+    expect(site_page.locator("main h1")).to_have_text("Real Estate Price Index")
+    expect(site_page.locator(".market-data-limit")).to_contain_text(
+        "does not provide a direct measure of demand"
+    )
+
+
 def test_home_search_navigates_to_filtered_results(site_page):
     site_page.locator("#search-form select[name='type']").select_option("villa")
     site_page.locator("#search-form select[name='listing']").select_option("sale")
@@ -91,7 +128,40 @@ def test_neighborhood_comparison_renders_selected_neighborhoods(site_page, live_
     expect(site_page.locator("#charts-section")).to_be_visible()
 
 
+def test_ai_assistant_opens_answers_with_sources_and_renders_safely(site_page):
+    if site_page.locator("html").get_attribute("lang") != "en":
+        site_page.locator("#langToggle").click()
+
+    trigger = site_page.locator("#aiAdvisorFab")
+    drawer = site_page.locator("#aiChatDrawer")
+    trigger.click()
+    expect(trigger).to_have_attribute("aria-expanded", "true")
+    expect(drawer).to_be_visible()
+
+    input_box = site_page.locator("#aiChatInput")
+    input_box.fill("Compare Hittin and Al Malqa")
+    site_page.locator("#aiChatForm").get_by_role("button").click()
+
+    answer = site_page.locator("#aiChatMessages .chat-bubble.bot").last
+    expect(answer).to_contain_text("Neighborhood comparison")
+    expect(answer.locator(".ai-chat-source")).to_have_count(2)
+    expect(answer.locator(".ai-chat-sources")).to_contain_text("Sources")
+
+    input_box.fill("show <img src=x onerror=alert(1)>")
+    site_page.locator("#aiChatForm").get_by_role("button").click()
+    user_message = site_page.locator("#aiChatMessages .chat-bubble.user").last
+    expect(user_message).to_have_text("show <img src=x onerror=alert(1)>")
+    expect(site_page.locator("#aiChatMessages img")).to_have_count(0)
+
+    site_page.keyboard.press("Escape")
+    expect(drawer).to_have_attribute("aria-hidden", "true")
+    expect(trigger).to_have_attribute("aria-expanded", "false")
+
+
 def test_theme_and_language_preferences_persist(site_page):
+    expect(site_page.locator("html")).to_have_attribute("data-theme", "light")
+    site_page.locator("#themeToggle").click()
+    expect(site_page.locator("html")).to_have_attribute("data-theme", "dark")
     site_page.locator("#themeToggle").click()
     expect(site_page.locator("html")).to_have_attribute("data-theme", "light")
     site_page.locator("#langToggle").click()
@@ -105,10 +175,101 @@ def test_theme_and_language_preferences_persist(site_page):
     expect(site_page.locator("html")).to_have_attribute("dir", "ltr")
 
 
+def test_english_language_translates_primary_pages_and_dynamic_content(site_page, live_server):
+    site_page.goto(f"{live_server}/", wait_until="domcontentloaded")
+    site_page.evaluate("localStorage.removeItem('lang')")
+    site_page.reload(wait_until="domcontentloaded")
+    remaining_arabic = {}
+
+    for path in ("/", "/map", "/properties", "/compare", "/statistics", "/developers", "/admin/login"):
+        site_page.goto(f"{live_server}{path}", wait_until="domcontentloaded")
+        if site_page.locator("html").get_attribute("lang") != "en":
+            site_page.locator("#langToggle").click()
+        site_page.wait_for_timeout(300)
+
+        if path == "/":
+            expect(site_page.locator("#featured-grid .property-card").first).to_be_visible()
+        elif path == "/map":
+            expect(site_page.locator("#properties-list")).to_be_visible()
+        elif path == "/properties":
+            site_page.locator(".property-card button").first.click()
+            expect(site_page.locator("#propertyDetailsModal")).to_have_class(re.compile(r"\bactive\b"))
+            site_page.wait_for_timeout(100)
+            modal_arabic = site_page.locator("#propertyDetailsModal").evaluate(
+                """element => element.innerText.split('\\n').map(text => text.trim())
+                  .filter(text => /[\\u0600-\\u06FF]/.test(text))"""
+            )
+            assert not modal_arabic, f"Arabic text remains in the English property details modal: {modal_arabic}"
+
+        untranslated = site_page.evaluate(
+            """() => {
+              const arabic = /[\\u0600-\\u06FF]/;
+              const text = [];
+              const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+              let node;
+              while ((node = walker.nextNode())) {
+                if (!node.parentElement.closest('script,style,noscript') && arabic.test(node.nodeValue.trim())) {
+                  text.push(node.nodeValue.trim());
+                }
+              }
+              document.querySelectorAll('[placeholder],[title],[aria-label],[alt]').forEach(element => {
+                for (const attribute of ['placeholder','title','aria-label','alt']) {
+                  const value = element.getAttribute(attribute);
+                  if (value && arabic.test(value)) text.push(value);
+                }
+              });
+              return [...new Set(text)];
+            }"""
+        )
+        if untranslated:
+            remaining_arabic[path] = untranslated
+
+        if path == "/compare":
+            selects = site_page.locator(".compare-select")
+            selects.nth(0).select_option(index=1)
+            selects.nth(1).select_option(index=2)
+            site_page.locator("#compare-btn").click()
+            expect(site_page.locator("#compare-results .compare-card")).to_have_count(2)
+            site_page.wait_for_timeout(100)
+            dynamic_untranslated = site_page.evaluate(
+                """() => [...document.querySelectorAll('#compare-results *')]
+                  .filter(element => element.children.length === 0)
+                  .map(element => element.textContent.trim())
+                  .filter(text => /[\\u0600-\\u06FF]/.test(text))"""
+            )
+            if dynamic_untranslated:
+                remaining_arabic["/compare (dynamic results)"] = dynamic_untranslated
+            site_page.locator("#langToggle").click()
+            expect(site_page.locator("html")).to_have_attribute("lang", "ar")
+            expect(site_page.locator("#compare-results")).to_contain_text("حي")
+
+    assert not remaining_arabic, f"Arabic text remains in English mode: {remaining_arabic}"
+
 def test_home_neighborhood_stats_remain_legible_in_light_theme(site_page):
-    site_page.locator("#themeToggle").click()
+    expect(site_page.locator("html")).to_have_attribute("data-theme", "light")
     stats = site_page.locator(".neighborhood-stats .stat-pill").first
     expect(stats).to_be_visible()
+    site_page.wait_for_function(
+        """() => {
+          const element = document.querySelector('.neighborhood-stats .stat-pill');
+          if (!element) return false;
+          const rgb = value => value.match(/[\\d.]+/g).slice(0, 3).map(Number);
+          const luminance = color => {
+            const channels = rgb(color).map(channel => {
+              const normalized = channel / 255;
+              return normalized <= 0.04045
+                ? normalized / 12.92
+                : ((normalized + 0.055) / 1.055) ** 2.4;
+            });
+            return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+          };
+          const style = getComputedStyle(element);
+          const foreground = luminance(style.color);
+          const background = luminance(style.backgroundColor);
+          return (Math.max(foreground, background) + 0.05)
+            / (Math.min(foreground, background) + 0.05) >= 4.5;
+        }"""
+    )
 
     contrast_ratio = stats.evaluate(
         """element => {

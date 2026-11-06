@@ -23,39 +23,32 @@ function formatPrice(price) {
 function buildPropertyCard(prop) {
   const imgFallback = 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=600';
   const isSale = prop.listing_type === 'sale';
-  const badgeClass = isSale ? 'badge-sale' : 'badge-rent';
-  const badgeText = isSale ? '🏷️ للبيع' : '🔑 للإيجار السنوي';
+  const listingText = isSale ? 'للبيع' : 'للإيجار السنوي';
   const typeText = TYPE_LABELS[prop.property_type] || prop.property_type;
 
   return `
-    <div class="property-card card-lift" data-reveal onclick="openPropertyModalById(${prop.id})" style="cursor:pointer">
+    <article class="property-card home-property-card">
       <div class="property-img">
         <img src="${prop.image_url || imgFallback}"
-          alt="${prop.title}"
-          onerror="this.src='${imgFallback}'"
+          alt="صورة توضيحية لعقار سكني"
+          onerror="this.onerror=null;this.src='${imgFallback}'"
           loading="lazy">
-        <span class="badge ${badgeClass}">${badgeText}</span>
-        <div class="badge" style="bottom:0.75rem;right:0.75rem;top:auto;background:rgba(0,0,0,0.65);color:#fff;font-size:0.72rem">
-          ${typeText}
-        </div>
-        ${prop.is_featured ? '<span class="badge badge-featured" style="top:1rem;left:1rem">⭐ مميز</span>' : ''}
       </div>
-      <div class="property-info">
+      <div class="property-info home-property-info">
+        <p class="home-property-type">${typeText} · ${listingText}</p>
         <h3 class="property-title">${prop.title}</h3>
         <div class="property-price">${prop.price_formatted || formatPrice(prop.price)}</div>
-        <div class="property-meta">
-          ${prop.bedrooms ? `<span><i class="fas fa-bed"></i> ${prop.bedrooms} غرف</span>` : ''}
-          ${prop.bathrooms ? `<span><i class="fas fa-bath"></i> ${prop.bathrooms} حمام</span>` : ''}
-          ${prop.area_sqm ? `<span><i class="fas fa-ruler-combined"></i> ${prop.area_sqm} م²</span>` : ''}
-        </div>
-        ${prop.neighborhood_name ? `<p style="font-size:0.8rem;color:var(--color-text-secondary);margin-top:0.5rem"><i class="fas fa-map-marker-alt" style="color:var(--color-accent-primary)"></i> ${prop.neighborhood_name}</p>` : ''}
-        <div style="margin-top:0.75rem;text-align:center">
-          <span class="btn btn-ghost btn-sm" style="width:100%;pointer-events:none">
-            <i class="fas fa-eye"></i> عرض التفاصيل
-          </span>
-        </div>
+        <p class="home-property-meta">
+          ${prop.area_sqm ? `<span>${prop.area_sqm} م²</span>` : ''}
+          ${prop.bedrooms ? `<span>${prop.bedrooms} غرف</span>` : ''}
+          ${prop.neighborhood_name ? `<span>${prop.neighborhood_name}</span>` : ''}
+        </p>
+        <button type="button" class="home-details-button" onclick="openPropertyModalById(${prop.id})" aria-label="عرض تفاصيل ${prop.title}">
+          <span>عرض التفاصيل</span>
+          <i class="fas fa-arrow-left" aria-hidden="true"></i>
+        </button>
       </div>
-    </div>
+    </article>
   `;
 }
 
@@ -117,7 +110,7 @@ function renderCompareCards(neighborhoods) {
         <div style="margin-bottom:1rem">
           <p class="text-muted" style="font-size:0.75rem;margin-bottom:0.5rem">البنية التحتية</p>
           <div class="progress-bar">
-            <div class="progress-fill" data-width="${score}" style="background:${scoreColor};width:0"></div>
+            <div class="progress-fill" data-width="${score}" style="background:${scoreColor};width:${score}%"></div>
           </div>
           <div style="display:flex;justify-content:space-between;font-size:0.7rem;color:var(--color-text-muted);margin-top:0.25rem">
             <span>0</span>
@@ -127,12 +120,12 @@ function renderCompareCards(neighborhoods) {
         </div>
 
         <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:0.5rem">
-          ${buildInfoPill('🌳', 'الحدائق', n.parks_count)}
-          ${buildInfoPill('🏥', 'المستشفيات', n.hospitals_count)}
-          ${buildInfoPill('🏫', 'المدارس', n.schools_count)}
-          ${buildInfoPill('🏬', 'المجمعات', n.malls_count)}
-          ${buildInfoPill('🏗️', 'مساحة مبنية', n.built_area_pct + '%')}
-          ${buildInfoPill('🛣️', 'مداخل طرق', n.highway_access)}
+          ${buildInfoPill('🌳', formatPluralValue(n.parks_count, 'حديقة', 'حدائق'))}
+          ${buildInfoPill('🏥', formatPluralValue(n.hospitals_count, 'مستشفى', 'مستشفيات'))}
+          ${buildInfoPill('🏫', formatPluralValue(n.schools_count, 'مدرسة', 'مدارس'))}
+          ${buildInfoPill('🏬', (n.malls_count || 0) + ' مجمعات')}
+          ${buildInfoPill('🏗️', (n.built_area_pct || 0) + '% مساحة مبنية')}
+          ${buildInfoPill('🛣️', (n.highway_access || '-') + ' مداخل طرق')}
         </div>
       </div>
     </div>`;
@@ -149,8 +142,17 @@ function renderCompareCards(neighborhoods) {
   renderBarChart(neighborhoods);
 }
 
-function buildInfoPill(emoji, label, value) {
-  return `<div class="stat-pill">${emoji} <span style="color:var(--color-text-primary);font-weight:600">${value}</span> ${label}</div>`;
+function formatPluralValue(count, singular, plural) {
+  count = parseInt(count, 10) || 0;
+  if (count === 0) return `لا توجد ${plural}`;
+  if (count === 1) return singular === 'مستشفى' ? 'مستشفى واحد' : singular === 'مدرسة' ? 'مدرسة واحدة' : 'حديقة واحدة';
+  if (count === 2) return singular === 'مستشفى' ? 'مستشفيان' : singular === 'مدرسة' ? 'مدرستان' : 'حديقتان';
+  if (count >= 3 && count <= 10) return `${count} ${plural}`;
+  return `${count} ${singular}`;
+}
+
+function buildInfoPill(emoji, text) {
+  return `<div class="stat-pill">${emoji} <span style="color:var(--color-text-primary);font-weight:600">${text}</span></div>`;
 }
 
 // ── Line Chart: Price History ─────────────────────────────────
@@ -424,13 +426,17 @@ function openPropertyModal(prop) {
   }
 
   modal.classList.add('active');
+  modal.setAttribute('aria-hidden', 'false');
   document.body.style.overflow = 'hidden';
 }
 window.openPropertyModal = openPropertyModal;
 
 function closePropertyModal() {
   const modal = document.getElementById('propertyDetailsModal');
-  if (modal) modal.classList.remove('active');
+  if (modal) {
+    modal.classList.remove('active');
+    modal.setAttribute('aria-hidden', 'true');
+  }
   document.body.style.overflow = '';
 }
 window.closePropertyModal = closePropertyModal;
@@ -459,79 +465,208 @@ window.simulateContactAgent = simulateContactAgent;
 // ═══════════════════════════════════════════════════════════
 // AI ASSISTANT (RAG ADVISOR) CHAT INTERFACE
 // ═══════════════════════════════════════════════════════════
+let aiChatSending = false;
+
+function getAIChatLanguage() {
+  return document.documentElement.lang === 'en' ? 'en' : 'ar';
+}
+
+function aiChatText(arabic, english) {
+  return getAIChatLanguage() === 'en' ? english : arabic;
+}
+
+function setAIChatOpen(isOpen) {
+  const drawer = document.getElementById('aiChatDrawer');
+  const trigger = document.getElementById('aiAdvisorFab');
+  if (!drawer) return;
+
+  drawer.classList.toggle('open', isOpen);
+  drawer.setAttribute('aria-hidden', String(!isOpen));
+  trigger?.setAttribute('aria-expanded', String(isOpen));
+  if (isOpen) {
+    const input = document.getElementById('aiChatInput');
+    window.setTimeout(() => input?.focus(), 350);
+  } else {
+    trigger?.focus();
+  }
+}
+
 function toggleAIChat() {
   const drawer = document.getElementById('aiChatDrawer');
-  if (drawer) {
-    drawer.classList.toggle('open');
-    if (drawer.classList.contains('open')) {
-      const input = document.getElementById('aiChatInput');
-      window.setTimeout(() => input?.focus(), 350);
-    }
-  }
+  if (drawer) setAIChatOpen(!drawer.classList.contains('open'));
 }
 window.toggleAIChat = toggleAIChat;
 
-function sendQuickPrompt(promptText) {
+function sendQuickPrompt(arabicPrompt, englishPrompt) {
   const input = document.getElementById('aiChatInput');
-  if (input) {
-    input.value = promptText;
-    handleAIChatSubmit();
-  }
+  if (!input || aiChatSending) return;
+  input.value = getAIChatLanguage() === 'en' ? englishPrompt : arabicPrompt;
+  handleAIChatSubmit();
 }
 window.sendQuickPrompt = sendQuickPrompt;
+
+function appendAIChatReply(container, reply) {
+  const tokenPattern = /(\*\*[^*\n]+\*\*|\*[^*\n]+\*|\n)/g;
+  let lastIndex = 0;
+  let match;
+
+  while ((match = tokenPattern.exec(reply)) !== null) {
+    container.appendChild(document.createTextNode(reply.slice(lastIndex, match.index)));
+    if (match[0] === '\n') {
+      container.appendChild(document.createElement('br'));
+    } else {
+      const isBold = match[0].startsWith('**');
+      const emphasis = document.createElement(isBold ? 'strong' : 'em');
+      emphasis.textContent = match[0].slice(isBold ? 2 : 1, isBold ? -2 : -1);
+      container.appendChild(emphasis);
+    }
+    lastIndex = tokenPattern.lastIndex;
+  }
+  container.appendChild(document.createTextNode(reply.slice(lastIndex)));
+}
+
+function appendAIChatSources(container, sources, language) {
+  if (!Array.isArray(sources) || sources.length === 0) return;
+
+  const sourceList = document.createElement('div');
+  sourceList.className = 'ai-chat-sources';
+  const label = document.createElement('strong');
+  label.textContent = language === 'en' ? 'Sources' : 'المصادر';
+  sourceList.appendChild(label);
+
+  sources.forEach((source) => {
+    const sourceLabel = document.createElement('span');
+    sourceLabel.className = 'ai-chat-source';
+    sourceLabel.textContent = language === 'en'
+      ? (source.label_en || source.label || '')
+      : (source.label || source.label_en || '');
+    if (sourceLabel.textContent) sourceList.appendChild(sourceLabel);
+  });
+
+  if (sourceList.childElementCount > 1) container.appendChild(sourceList);
+}
 
 async function handleAIChatSubmit(e) {
   if (e && e.preventDefault) e.preventDefault();
   const input = document.getElementById('aiChatInput');
   const messagesBox = document.getElementById('aiChatMessages');
-  if (!input || !messagesBox) return;
+  const submitButton = document.getElementById('aiChatSubmit');
+  const quickPrompts = document.querySelectorAll('.quick-prompt-btn');
+  if (!input || !messagesBox || aiChatSending) return;
 
   const query = input.value.trim();
   if (!query) return;
 
-  // Append user message
+  aiChatSending = true;
+  const language = getAIChatLanguage();
   const userBubble = document.createElement('div');
   userBubble.className = 'chat-bubble user';
+  userBubble.setAttribute('dir', language === 'en' ? 'ltr' : 'rtl');
   userBubble.textContent = query;
   messagesBox.appendChild(userBubble);
   input.value = '';
-  messagesBox.scrollTop = messagesBox.scrollHeight;
 
-  // Append bot loading bubble
   const botBubble = document.createElement('div');
   botBubble.className = 'chat-bubble bot';
-  botBubble.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري استرجاع البيانات وتحليل السوق...';
+  botBubble.setAttribute('dir', language === 'en' ? 'ltr' : 'rtl');
+  const loadingText = document.createElement('span');
+  loadingText.textContent = aiChatText(
+    'جارٍ البحث في بيانات المنصة...',
+    'Searching platform data...'
+  );
+  botBubble.appendChild(loadingText);
   messagesBox.appendChild(botBubble);
+  messagesBox.setAttribute('aria-busy', 'true');
+  if (submitButton) submitButton.disabled = true;
+  quickPrompts.forEach((button) => { button.disabled = true; });
   messagesBox.scrollTop = messagesBox.scrollHeight;
 
+  const showError = (message) => {
+    botBubble.replaceChildren(document.createTextNode(message));
+    botBubble.classList.add('error');
+  };
+
   try {
-    const res = await fetch('/api/ai/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query })
-    });
-    const data = await res.json();
-    if (data.reply) {
-      const formattedReply = data.reply
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*(.*?)\*/g, '<em>$1</em>')
-        .replace(/\n/g, '<br>');
-      botBubble.innerHTML = formattedReply;
-    } else {
-      botBubble.textContent = 'عذراً، لم أتمكن من معالجة الطلب حالياً. يرجى المحاولة مرة أخرى.';
+    let response;
+    try {
+      response = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query })
+      });
+    } catch {
+      showError(aiChatText(
+        'تعذر الاتصال بخدمة المساعد. تحقق من اتصالك وحاول مجدداً.',
+        'Could not connect to the assistant. Check your connection and try again.'
+      ));
+      return;
     }
-  } catch (err) {
-    botBubble.textContent = 'حدث خطأ في الاتصال بخدمة الذكاء الاصطناعي.';
+
+    let data;
+    try {
+      data = await response.json();
+    } catch {
+      showError(aiChatText(
+        'أعاد المساعد استجابة غير قابلة للقراءة. يرجى المحاولة مرة أخرى.',
+        'The assistant returned an unreadable response. Please try again.'
+      ));
+      return;
+    }
+    if (!data || typeof data !== 'object') {
+      showError(aiChatText(
+        'أعاد المساعد استجابة غير صالحة. يرجى المحاولة مرة أخرى.',
+        'The assistant returned an invalid response. Please try again.'
+      ));
+      return;
+    }
+    const responseLanguage = data.language === 'en' || data.language === 'ar'
+      ? data.language
+      : language;
+    botBubble.replaceChildren();
+    botBubble.setAttribute('dir', responseLanguage === 'en' ? 'ltr' : 'rtl');
+    if (typeof data.reply === 'string' && data.reply) {
+      appendAIChatReply(botBubble, data.reply);
+    } else {
+      botBubble.textContent = aiChatText(
+        'تعذر معالجة الطلب. يرجى المحاولة مرة أخرى.',
+        'The request could not be processed. Please try again.'
+      );
+    }
+    appendAIChatSources(botBubble, data.sources, responseLanguage);
+    if (!response.ok || data.success === false) botBubble.classList.add('error');
+  } finally {
+    aiChatSending = false;
+    messagesBox.setAttribute('aria-busy', 'false');
+    if (submitButton) submitButton.disabled = !input.value.trim();
+    quickPrompts.forEach((button) => { button.disabled = false; });
+    messagesBox.scrollTop = messagesBox.scrollHeight;
   }
-  messagesBox.scrollTop = messagesBox.scrollHeight;
 }
 window.handleAIChatSubmit = handleAIChatSubmit;
+
+const aiChatForm = document.getElementById('aiChatForm');
+aiChatForm?.addEventListener('submit', handleAIChatSubmit);
+
+document.querySelectorAll('.quick-prompt-btn').forEach((button) => {
+  button.addEventListener('click', () => {
+    sendQuickPrompt(button.dataset.promptAr || '', button.dataset.promptEn || '');
+  });
+});
+
+document.getElementById('aiChatInput')?.addEventListener('input', (event) => {
+  const submitButton = document.getElementById('aiChatSubmit');
+  if (submitButton && !aiChatSending) {
+    submitButton.disabled = !event.currentTarget.value.trim();
+  }
+});
 
 // Close modal on Escape key
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     closePropertyModal();
     const drawer = document.getElementById('aiChatDrawer');
-    if (drawer) drawer.classList.remove('open');
+    if (drawer) {
+      if (drawer.classList.contains('open')) setAIChatOpen(false);
+    }
   }
 });

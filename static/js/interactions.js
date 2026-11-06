@@ -14,6 +14,7 @@ const revealObserver = new IntersectionObserver((entries) => {
   });
 }, { threshold: 0.08, rootMargin: '0px 0px -30px 0px' });
 
+document.documentElement.classList.add('has-reveal');
 document.querySelectorAll('[data-reveal]').forEach(el => revealObserver.observe(el));
 // Expose for dynamic elements
 window.revealObserver = revealObserver;
@@ -253,14 +254,14 @@ const marketBarObs = new IntersectionObserver((entries) => {
       entry.target.querySelectorAll('.market-bar-fill').forEach(fill => {
         const target = fill.dataset.width;
         if (target) {
-          setTimeout(() => { fill.style.width = target + '%'; }, 250);
+          setTimeout(() => { fill.style.width = target + '%'; }, 100);
         }
       });
       marketBarObs.unobserve(entry.target);
     }
   });
-}, { threshold: 0.2 });
-document.querySelectorAll('.developer-card').forEach(card => marketBarObs.observe(card));
+}, { threshold: 0.1 });
+document.querySelectorAll('.developer-card, .market-bar-container, .card').forEach(el => marketBarObs.observe(el));
 
 // ── Theme Toggle ──────────────────────────────────────────────
 const themeToggleBtn = document.getElementById('themeToggle');
@@ -274,7 +275,7 @@ if (themeToggleBtn) {
       if (themeIcon) themeIcon.className = 'fas fa-moon';
       if (themeLabel) themeLabel.textContent = themeLabel.dataset.en || 'Day';
     } else {
-      document.documentElement.removeAttribute('data-theme');
+      document.documentElement.setAttribute('data-theme', 'dark');
       if (themeIcon) themeIcon.className = 'fas fa-sun';
       if (themeLabel) themeLabel.textContent = themeLabel.dataset.ar || 'ليلي';
     }
@@ -282,11 +283,11 @@ if (themeToggleBtn) {
     document.dispatchEvent(new CustomEvent('aqar-theme-change', { detail: { theme } }));
   };
 
-  const savedTheme = localStorage.getItem('theme') || 'dark';
+  const savedTheme = localStorage.getItem('theme') || 'light';
   applyTheme(savedTheme);
 
   themeToggleBtn.addEventListener('click', () => {
-    const currentTheme = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
     const nextTheme = currentTheme === 'light' ? 'dark' : 'light';
     applyTheme(nextTheme);
   });
@@ -319,7 +320,6 @@ if (langToggleBtn) {
     'لوحة الإدارة': 'Admin Dashboard',
     'الصفحات': 'Pages',
     'المصادر': 'Resources',
-    'بيانات': 'Data',
     'عرض الكل': 'View all',
     'المطورون المعتمدون من برنامج وافي مع بياناتهم وتقييماتهم': 'Certified WAFI developers with their data and ratings',
     'اختر حيين أو أكثر لمقارنة مستوى الخدمات والأسعار وجودة البنية التحتية': 'Choose two or more neighborhoods to compare services, prices, and infrastructure quality',
@@ -672,6 +672,233 @@ if (langToggleBtn) {
     'مستشفى': 'hospital',
     'مدرسة': 'school',
     'حديقة': 'park',
+    'عرض تفاصيل ': 'View details: ',
+    'صورة توضيحية من بيانات العرض التجريبية؛ لا تمثل عرضاً عقارياً فعلياً': 'Illustrative image from sample listings; not an actual property offer',
+    'صورة توضيحية من بيانات العرض التجريبية: ': 'Illustrative image from sample listings: ',
+    'صورة توضيحية لعقار سكني': 'Illustrative image of a residential property',
+    'مؤشرات الخدمات وأسعار الأراضي كما تظهر في بيانات العرض التجريبية.': 'Service indicators and land prices shown in the sample data.',
+    'عقار مميز في': 'Featured property in',
+    'بموقع استراتيجي قريب من الخدمات.': 'in a strategic location near services.',
+    'الأرض / م²': 'Land / sqm',
+    'كل أدوات البحث': 'All Search Tools',
+    'انتقل من استكشاف المنطقة إلى مقارنة الخيارات في مكان واحد.': 'Move from exploring neighborhoods to comparing options in one place.',
+    'استكشف الأحياء والعقارات على الخريطة.': 'Explore neighborhoods and properties on the map.',
+    'قارن مؤشرات الخدمات والأسعار المسجلة.': 'Compare recorded service and price indicators.',
+    'إحصائيات المنصة': 'Platform Statistics',
+    'اطّلع على ملخص البيانات واتجاهاتها التجريبية.': 'View a summary of the sample data and its trends.',
+    'دليل المطورين': 'Developer Directory',
+    'تصفّح سجلات المطورين ضمن بيانات العرض.': 'Browse developer profiles in the sample data.',
+    'ابدأ من الخريطة': 'Start with the Map',
+    'اختر الحي الذي يهمك، ثم استكشف السجلات المتاحة في العينة.': 'Choose a neighborhood, then explore the listings in the sample.',
+    'هذا المشروع أكاديمي وتجريبي؛ لا تستخدم بياناته لاتخاذ قرارات شراء أو استثمار.': 'This is an academic demonstration; do not use its data for purchasing or investment decisions.',
+    'هذا المشروع': 'This project is',
+    '؛ لا تستخدم بياناته لاتخاذ قرارات شراء أو استثمار.': '; do not use its data for purchasing or investment decisions.',
+    'السجلات والصور والأسعار المعروضة تجريبية ولا تمثل عروضاً فعلية.': 'Listings, images, and prices are for demonstration only and do not represent actual offers.',
+    'البحث في العقارات': 'Search properties',
+    'تنبيه حول البيانات': 'Data Disclaimer',
+    'القائمة': 'Menu',
+    'العودة للأعلى': 'Back to top',
+    'إغلاق المستشار': 'Close advisor',
+    'تحديد': 'Select',
+    'استكشف حي ': 'Explore ',
+    'على Map': ' on the map',
+    'عن البيانات': 'About the Data',
+    'مشروع أكاديمي تجريبي لاستكشاف سجلات العقارات والأحياء في مدينة الرياض.': 'An academic demonstration project exploring property and neighborhood listings in Riyadh.',
+    'لا تستخدم بياناته لاتخاذ قرارات شراء أو استثمار.': 'Do not use its data for purchasing or investment decisions.',
+    'الرجاء الرجوع دائماً للمنصة الرسمية لبرنامج': 'Always refer to the official platform of the',
+    'بيانات تجريبية لأغراض العرض والتحليل. يُرجى الرجوع دائماً للمنصة الرسمية لبرنامج': 'Sample data for demonstration and analysis. Always refer to the official platform of the',
+    ' للتحقق من التراخيص.': ' to verify licenses.',
+    'مع بياناتهم وتقييماتهم المعتمدة': 'with their verified profiles and ratings',
+    'المطورون المعتمدون من برنامج وافي مع بياناتهم وتقييماتهم المعتمدة': 'WAFI-certified developers with verified profiles and ratings',
+    'المطورون المعتمدون من برنامج وافي مع بياناتهم وتقييماتهم': 'WAFI-certified developers with their profiles and ratings',
+    'المطورون المعتمدون من برنامج وافي مع بياناتهم وتقييماتهم المعتمدة': 'WAFI-certified developers with their verified profiles and ratings',
+    'مجموعة إتقان': 'Etqan Group',
+    'الهلال للتطوير': 'Al Hilal Development',
+    'من السوق': 'of the market',
+    'عقار ذكي': 'Aqar Dhaki',
+    'ذكي': 'Smart',
+    'منصة العقار الذكي': 'Aqar Dhaki Platform',
+    'استكشف عقارات الرياض': 'Explore Riyadh Properties',
+    'تصفّح سجلات العقارات والأحياء، ثم قارن خياراتك على الخريطة.': 'Browse property and neighborhood listings, then compare them on the map.',
+    'بيانات تجريبية لأغراض العرض؛ الصور والأسعار لا تمثل عروضاً فعلية أو أسعار السوق الحالية.': 'Sample data for demonstration; images and prices are not actual listings or current market prices.',
+    'أحياء شمال الرياض': 'Northern Riyadh Neighborhoods',
+    'مخطط توضيحي لأحياء شمال الرياض': 'Illustrative map of northern Riyadh neighborhoods',
+    'تصور بصري لمواقع أحياء الياسمين والملقا والنرجس والغدير والمروج، وليس خريطة جغرافية دقيقة.': 'A visual illustration of Al Yasmin, Al Malqa, Al Narjis, Al Ghadir, and Al Muruj; not a precise geographic map.',
+    'مخطط بصري للتوضيح، وليس خريطة جغرافية دقيقة.': 'Illustrative diagram, not a geographically accurate map.',
+    'نماذج من بيانات العقارات': 'Sample Property Listings',
+    'تصفّح عيّنة من السجلات واستخدم البحث للوصول إلى التفاصيل.': 'Browse sample listings and use search to find details.',
+    'السجلات والصور والأسعار المعروضة تجريبية، ولا تمثل عروضاً أو أسعاراً فعلية في السوق.': 'Listings, images, and prices are for demonstration only and do not represent actual offers or market prices.',
+    'السجلات والصور والأسعار المعروضة تجريبية، ولا تمثل عروضاً أو أسعاراً فعلية في السوق': 'Listings, images, and prices are for demonstration only and do not represent actual offers or market prices.',
+    'السجلات والصور والأسعار المعروضة تجريبية، ولا تمثل عروضاً فعلية أو أسعاراً فعلية في السوق.': 'Listings, images, and prices are for demonstration only and do not represent actual offers or market prices.',
+    'السجلات والصور والأسعار المعروضة تجريبية، ولا تمثل عروضاً فعلية أو أسعاراً فعلية في السوق': 'Listings, images, and prices are for demonstration only and do not represent actual offers or market prices.',
+    'مشروع أكاديمي تجريبي لاستكشاف سجلات العقارات والأحياء في مدينة الرياض.': 'An academic demonstration project exploring property and neighborhood listings in Riyadh.',
+    'عن البيانات': 'About the Data',
+    'أكاديمي وتجريبي': 'Academic Demonstration',
+    'هذا المشروع أكاديمي وتجريبي؛ لا تستخدم بياناته لاتخاذ قرارات شراء أو استثمار.': 'This is an academic demonstration; do not use its data to make purchasing or investment decisions.',
+    'العقارات المتاحة': 'Available Properties',
+    'عقار متاح': 'properties available',
+    'العقارات المميزة': 'Featured Properties',
+    'كل السجلات': 'All Listings',
+    'ابحث في السجلات': 'Search Listings',
+    'كل الأحياء': 'All Neighborhoods',
+    'تصفية': 'Filter',
+    'إعادة': 'Reset',
+    'مميز': 'Featured',
+    'للإيجار السنوي': 'For Annual Rent',
+    'للإيجار': 'For Rent',
+    'عرض كامل التفاصيل': 'View Full Details',
+    'لا توجد عقارات بهذه المعايير': 'No properties match these criteria',
+    'جرب تغيير معايير البحث أو': 'Try changing your search criteria or',
+    'عرض كل العقارات': 'View All Properties',
+    'غرف': 'Bedrooms',
+    'حمام': 'Bathrooms',
+    'م²': 'sqm',
+    'مليون': 'million',
+    'مليون ريال': 'million SAR',
+    'ريال/م²': 'SAR/sqm',
+    'عن البيانات': 'About the Data',
+    'خيارات الخريطة': 'Map Options',
+    'الطبقات': 'Layers',
+    'تصفية العقارات': 'Property Filters',
+    'مقياس البنية التحتية': 'Infrastructure Rating',
+    'درجة البنية التحتية': 'Infrastructure Score',
+    'متوسط الأراضي': 'Average Land Price',
+    'تركيز الخريطة': 'Focus Map',
+    'عقارات الحي': 'Neighborhood Properties',
+    'الطبقات': 'Layers',
+    'جاري تحميل العقارات...': 'Loading properties...',
+    'مقارنة الأحياء': 'Neighborhood Comparison',
+    'اختر حيين أو أكثر لمقارنة مستوى الخدمات والأسعار وجودة البنية التحتية': 'Choose two or more neighborhoods to compare services, prices, and infrastructure quality.',
+    'اختر الأحياء للمقارنة (2 إلى 4 أحياء)': 'Choose 2 to 4 neighborhoods to compare',
+    'الحي الأول': 'First Neighborhood',
+    'الحي الثاني': 'Second Neighborhood',
+    'الحي الثالث': 'Third Neighborhood',
+    'الحي الرابع': 'Fourth Neighborhood',
+    'اختر حياً': 'Choose a neighborhood',
+    'ابدأ المقارنة': 'Start Comparing',
+    'اختر حيين أو أكثر من القائمة أعلاه ثم اضغط "عرض المقارنة"': 'Choose at least two neighborhoods above, then select “Show Comparison”.',
+    'اختر حيين أو أكثر للمقارنة': 'Choose at least two neighborhoods to compare',
+    'مقارنة سريعة (أفضل 3 أحياء)': 'Quick Compare (Top 3 Neighborhoods)',
+    'تطور سعر المتر المربع (ريال)': 'Price per Square Meter Over Time (SAR)',
+    'مقارنة الخدمات والمرافق': 'Services and Amenities Comparison',
+    'درجة البنية التحتية': 'Infrastructure Score',
+    'إحصائيات ومؤشرات عقارية': 'Real Estate Statistics and Indicators',
+    'تحليل تفصيلي لبيانات السوق العقاري في الرياض واتجاهات العرض والطلب.': 'An in-depth analysis of Riyadh real estate data and supply and demand trends.',
+    'نمو حجم المعروض (5 سنوات)': 'Supply Growth (5 Years)',
+    'متوسط نمو أسعار الأراضي سنوياً': 'Average Annual Land Price Growth',
+    'عقار متاح للبيع هذا الشهر': 'Properties for Sale This Month',
+    'أعلى عائد إيجاري (حي الملقا)': 'Highest Rental Yield (Al Malqa)',
+    'حجم العرض والطلب': 'Supply and Demand',
+    'متوسط سعر المتر (أراضي)': 'Average Land Price per Square Meter',
+    'آخر 5 سنوات': 'Last 5 Years',
+    'بالريال السعودي': 'In Saudi Riyals',
+    'توزيع العقارات': 'Property Distribution',
+    'الإيجار مقابل البيع': 'Rent vs. Sale',
+    'أعلى الأحياء عائداً (ROI)': 'Top Neighborhoods by ROI',
+    'يتم تحديث البيانات بانتظام لضمان دقة المؤشرات العقارية المعروضة.': 'Data is updated regularly to keep the displayed real estate indicators accurate.',
+    'المطورون العقاريون': 'Real Estate Developers',
+    'مطورون معتمدون من برنامج وافي مع بياناتهم وتقييماتهم المعتمدة': 'WAFI-certified developers with verified profiles and ratings',
+    'مطورين موثقين': 'verified developers',
+    'بيانات تجريبية لأغراض العرض والتحليل. يُرجى الرجوع دائماً للمنصة الرسمية لبرنامج وافي للتحقق من التراخيص.': 'Sample data for demonstration and analysis. Always check the official WAFI platform to verify licenses.',
+    'حصة المطورين في السوق': 'Developer Market Share',
+    'نسب العرض التجريبي': 'Sample Listing Shares',
+    'ملخص حصص السوق': 'Market Share Summary',
+    'أعلى 5 مطورين': 'Top 5 Developers',
+    'قيد التنفيذ': 'In Progress',
+    'الحصة من إجمالي السوق': 'Share of Total Market',
+    'موثق وافي': 'WAFI Certified',
+    'لوحة الإدارة': 'Admin Dashboard',
+    'منصة العقار الذكية - الرياض': 'Aqar Dhaki Platform - Riyadh',
+    'أدخل اسم المستخدم': 'Enter your username',
+    'أدخل كلمة المرور': 'Enter your password',
+    'دخول': 'Log In',
+    'هذه الصفحة مخصصة للمشرفين فقط': 'This page is for administrators only',
+    'العقارات والأحياء': 'Properties and Neighborhoods',
+    'الرياض': 'Riyadh',
+    'حي الياسمين': 'Al Yasmin',
+    'حي الملقا': 'Al Malqa',
+    'حي النرجس': 'Al Narjis',
+    'حي القيروان': 'Al Qirawan',
+    'حي العارض': 'Al Arid',
+    'حي المروج': 'Al Muruj',
+    'حي الغدير': 'Al Ghadir',
+    'حي الريان': 'Al Rayyan',
+    'حي العليا': 'Al Olaya',
+    'حي السليمانية': 'Al Sulaymaniyah',
+    'حي حطين': 'Hittin',
+    'حي الصحافة': 'Al Sahafah',
+    'حي العقيق': 'Al Aqiq',
+    'حي النخيل': 'Al Nakheel',
+    'حي الرائد': 'Al Raid',
+    'الياسمين': 'Al Yasmin',
+    'الملقا': 'Al Malqa',
+    'النرجس': 'Al Narjis',
+    'القيروان': 'Al Qirawan',
+    'العارض': 'Al Arid',
+    'المروج': 'Al Muruj',
+    'الغدير': 'Al Ghadir',
+    'الريان': 'Al Rayyan',
+    'العليا': 'Al Olaya',
+    'السليمانية': 'Al Sulaymaniyah',
+    'حطين': 'Hittin',
+    'الصحافة': 'Al Sahafah',
+    'العقيق': 'Al Aqiq',
+    'النخيل': 'Al Nakheel',
+    'الرائد': 'Al Raid',
+    'فيلا فاخرة': 'Luxury Villa',
+    'فيلا مميزة': 'Featured Villa',
+    'فيلا دوبلكس': 'Duplex Villa',
+    'فيلا عصرية': 'Modern Villa',
+    'قصر سكني': 'Residential Mansion',
+    'فيلا بتصميم مودرن': 'Contemporary Villa',
+    'فيلا زاوية': 'Corner Villa',
+    'شقة أنيقة': 'Elegant Apartment',
+    'شقة مفروشة': 'Furnished Apartment',
+    'شقة عصرية': 'Modern Apartment',
+    'شقة واسعة': 'Spacious Apartment',
+    'استوديو فاخر': 'Luxury Studio',
+    'شقة بنظام ذكي': 'Smart Apartment',
+    'روف مع تراس': 'Rooftop Apartment with Terrace',
+    'أرض سكنية': 'Residential Land',
+    'أرض تجارية': 'Commercial Land',
+    'أرض زاوية': 'Corner Plot',
+    'أرض استثمارية': 'Investment Land',
+    'قطعة أرض مميزة': 'Featured Land Plot',
+    'محل تجاري': 'Retail Shop',
+    'مكتب احترافي': 'Professional Office',
+    'مستودع تجاري': 'Commercial Warehouse',
+    'برج إداري': 'Office Tower',
+    'صالة عرض': 'Showroom',
+    ' في ': ' in ',
+    'عقارات': 'Properties',
+    'السجلات': 'Listings',
+    'منطقة': 'Area',
+    'منذ': 'Since',
+    'مداخل طرق': 'Road Access',
+    'مساحة مبنية': 'Built-up Area',
+    'مجمعات': 'Malls',
+    'لا توجد مستشفيات': 'No hospitals',
+    'مستشفى واحد': '1 hospital',
+    'مستشفيان': '2 hospitals',
+    'لا توجد مدارس': 'No schools',
+    'مدرسة واحدة': '1 school',
+    'مدرستان': '2 schools',
+    'لا توجد حدائق': 'No parks',
+    'حديقة واحدة': '1 park',
+    'حديقتان': '2 parks',
+    'تحديث دوري': 'Regular Updates',
+    'أفضل': 'Best',
+    'شركة الماجدية للتطوير العقاري': 'Al Majedia Real Estate Development',
+    'رسين للتطوير العقاري': 'Raseen Real Estate',
+    'دار الأركان': 'Dar Al Arkan',
+    'الهلال للتطوير': 'Al Hilal Development',
+    'مجموعة إتقان': 'Etqan Group',
+    'شركة رائدة في التطوير العقاري السكني الفاخر بمدينة الرياض، متخصصة في الفلل والمجمعات السكنية المتكاملة.': 'A leading Riyadh developer specializing in luxury residential properties and integrated residential communities.',
+    'ممشى الغدير': 'Al Ghadir Walkway',
+    'حديقة الملك سلمان': 'King Salman Park',
+    'حديقة الياسمين': 'Al Yasmin Park',
+    'حديقة الملقا المركزية': 'Al Malqa Central Park',
+    'حديقة العليا': 'Al Olaya Park',
   };
   const sortedTranslations = Object.entries(translationMap).sort(([a], [b]) => b.length - a.length);
   const originalPageTitle = document.title;
@@ -684,7 +911,10 @@ if (langToggleBtn) {
     sortedTranslations.forEach(([arabic, english]) => {
       if (translated.includes(arabic)) translated = translated.split(arabic).join(english);
     });
-    return translated;
+    return translated.replace(/[٠-٩۰-۹]/g, digit => {
+      const code = digit.charCodeAt(0);
+      return String(code >= 0x06f0 ? code - 0x06f0 : code - 0x0660);
+    }).replace(/٬/g, ',').replace(/٫/g, '.');
   };
   window.translateForCurrentLanguage = text => translateString(
     String(text),

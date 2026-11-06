@@ -182,29 +182,14 @@ TITLES = {
 }
 
 def seed_database():
-    """ملء قاعدة البيانات بالبيانات التجريبية"""
+    """ملء الجداول الفارغة بالبيانات التجريبية دون تكرار السجلات."""
     # Seed neighborhoods
     neighborhoods = []
     for data in NEIGHBORHOODS_DATA:
-        # Generate some fake historical price data for charting
-        base_price = data['land_price_per_sqm']
-        history = {
-            'labels': ['2020', '2021', '2022', '2023', '2024', '2025'],
-            'prices': [
-                base_price * 0.6,
-                base_price * 0.65,
-                base_price * 0.75,
-                base_price * 0.85,
-                base_price * 0.95,
-                base_price
-            ]
-        }
-        # Assuming we can store history somewhere, but the current model does not have a JSON column for it.
-        # Actually, `infrastructure_score` is used in charts, let's keep it. 
-        # I'll just save the normal model. We'll handle history globally in the stats page.
-        
-        n = Neighborhood(**data)
-        db.session.add(n)
+        n = Neighborhood.query.filter_by(name_ar=data['name_ar']).first()
+        if n is None:
+            n = Neighborhood(**data)
+            db.session.add(n)
         neighborhoods.append(n)
     db.session.commit()
 
@@ -220,13 +205,15 @@ def seed_database():
 
     # Seed parks
     for i, data in enumerate(PARKS_DATA):
+        if Park.query.filter_by(name_ar=data['name_ar']).first():
+            continue
         p = Park(**data)
         if i < len(neighborhoods):
             p.neighborhood_id = neighborhoods[i].id
         db.session.add(p)
     db.session.commit()
 
-    # Seed properties (Increase to 500)
+    # Properties have no stable seed key; only create the sample set when the table is empty.
     property_images = [
         'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800',
         'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800',
@@ -238,7 +225,8 @@ def seed_database():
         'https://images.unsplash.com/photo-1516455590571-18256e5bb9ff?w=800'
     ]
 
-    for i in range(500):
+    properties_added = 0
+    for i in range(500 if Property.query.count() == 0 else 0):
         neighborhood = random.choice(neighborhoods)
         prop_type = random.choices(PROPERTY_TYPES, weights=[40, 40, 10, 10])[0]
         listing_type = random.choices(LISTING_TYPES, weights=[60, 40])[0]
@@ -280,6 +268,10 @@ def seed_database():
             description=f"عقار مميز في {neighborhood.name_ar} بموقع استراتيجي قريب من الخدمات.",
         )
         db.session.add(p)
+        properties_added += 1
 
     db.session.commit()
-    print(f"تم إضافة {len(neighborhoods)} حياً، {len(developers)} مطور، و 500 عقار بنجاح.")
+    print(
+        f"تمت تهيئة {len(neighborhoods)} حياً، {len(developers)} مطوراً، "
+        f"و {properties_added} عقاراً تجريبياً."
+    )

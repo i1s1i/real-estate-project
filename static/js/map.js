@@ -170,11 +170,18 @@ async function loadNeighborhoods() {
             <i class="fas fa-tree" style="color:#10b981;margin-left:4px"></i>
             ${formatPluralParks(props.parks_count)} · <i class="fas fa-hospital" style="color:#3b82f6;margin-left:4px"></i> ${formatPluralHospitals(props.hospitals_count)}
           </p>
-          <button onclick="flyToNeighborhood(${props.center_lat},${props.center_lng})"
-            style="margin-top:10px;width:100%;padding:6px;background:linear-gradient(135deg,#c9a84c,#e0b860);
-            border:none;border-radius:8px;cursor:pointer;color:#0f172a;font-weight:700;font-size:0.8rem;font-family:Tajawal,sans-serif">
-            🎯 انتقل إلى الحي
-          </button>
+          <div style="display:flex;gap:6px;margin-top:10px">
+            <button onclick="flyToNeighborhood(${props.center_lat},${props.center_lng})"
+              style="flex:1;padding:7px;background:linear-gradient(135deg,#c9a84c,#e0b860);
+              border:none;border-radius:8px;cursor:pointer;color:#0f172a;font-weight:700;font-size:0.8rem;font-family:Tajawal,sans-serif">
+              🎯 تركيز الخريطة
+            </button>
+            <button onclick="filterPropertiesByNeighborhood('${props.id || ''}')"
+              style="flex:1;padding:7px;background:rgba(255,255,255,0.12);
+              border:1px solid rgba(255,255,255,0.2);border-radius:8px;cursor:pointer;color:#ffffff;font-weight:700;font-size:0.8rem;font-family:Tajawal,sans-serif">
+              🏘️ عقارات الحي
+            </button>
+          </div>
         </div>
       `, { maxWidth: 280, className: 'custom-popup' });
 
@@ -380,18 +387,20 @@ async function loadProperties(filters = {}) {
       const marker = L.marker([prop.lat, prop.lng], { icon });
       marker.bindPopup(`
         <div class="map-popup" dir="rtl" style="font-family:Tajawal,sans-serif">
-          <h4 style="font-size:0.95rem;margin-bottom:6px;color:#f8fafc;font-weight:700">${prop.title}</h4>
-          <div class="price" style="font-size:1.15rem;font-weight:800;color:var(--color-accent-primary);margin-bottom:8px">
-            ${prop.price_formatted}
+          <div style="cursor:pointer" onclick="openPropertyModalById(${prop.id})">
+            <h4 style="font-size:0.95rem;margin-bottom:6px;color:#f8fafc;font-weight:700">${prop.title}</h4>
+            <div class="price" style="font-size:1.15rem;font-weight:800;color:var(--color-accent-primary);margin-bottom:8px">
+              ${prop.price_formatted}
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+              <span class="badge ${isSale ? 'badge-sale' : 'badge-rent'}">
+                ${isSale ? '🏷️ للبيع' : '🔑 للإيجار السنوي'}
+              </span>
+              ${prop.bedrooms ? `<span style="background:rgba(255,255,255,0.08);border-radius:20px;padding:2px 8px;font-size:0.75rem;color:#cbd5e1">🛏️ ${prop.bedrooms} غرف</span>` : ''}
+              ${prop.area_sqm ? `<span style="background:rgba(255,255,255,0.08);border-radius:20px;padding:2px 8px;font-size:0.75rem;color:#cbd5e1">📐 ${prop.area_sqm} م²</span>` : ''}
+            </div>
+            ${prop.neighborhood_name ? `<p style="color:#94a3b8;font-size:0.8rem;margin-bottom:8px">📍 ${prop.neighborhood_name}</p>` : ''}
           </div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
-            <span class="badge ${isSale ? 'badge-sale' : 'badge-rent'}">
-              ${isSale ? '🏷️ للبيع' : '🔑 للإيجار السنوي'}
-            </span>
-            ${prop.bedrooms ? `<span style="background:rgba(255,255,255,0.08);border-radius:20px;padding:2px 8px;font-size:0.75rem;color:#cbd5e1">🛏️ ${prop.bedrooms} غرف</span>` : ''}
-            ${prop.area_sqm ? `<span style="background:rgba(255,255,255,0.08);border-radius:20px;padding:2px 8px;font-size:0.75rem;color:#cbd5e1">📐 ${prop.area_sqm} م²</span>` : ''}
-          </div>
-          ${prop.neighborhood_name ? `<p style="color:#94a3b8;font-size:0.8rem;margin-bottom:8px">📍 ${prop.neighborhood_name}</p>` : ''}
           <button onclick="openPropertyModalById(${prop.id})" class="btn btn-primary btn-sm btn-interactive" style="width:100%;justify-content:center;font-size:0.82rem;font-weight:700">
             <i class="fas fa-info-circle"></i> تفاصيل العقار الكاملة
           </button>
@@ -451,6 +460,15 @@ function flyToNeighborhood(lat, lng) {
   map.flyTo([lat, lng], 14, { duration: 1.2 });
 }
 window.flyToNeighborhood = flyToNeighborhood;
+
+function filterPropertiesByNeighborhood(neighborhoodId) {
+  if (!neighborhoodId) return;
+  loadProperties({ neighborhood: neighborhoodId });
+  const selectNeighborhood = document.getElementById('filter-neighborhood');
+  if (selectNeighborhood) selectNeighborhood.value = neighborhoodId;
+  if (window.showToast) window.showToast('تمت تصفية عقارات وأراضي الحي');
+}
+window.filterPropertiesByNeighborhood = filterPropertiesByNeighborhood;
 
 function flyToProperty(lat, lng) {
   map.flyTo([lat, lng], 16, { duration: 0.8 });

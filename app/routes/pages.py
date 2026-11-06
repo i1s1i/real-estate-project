@@ -6,7 +6,7 @@ from flask import Blueprint, render_template, redirect, url_for, request, flash,
 from app.models.neighborhood import Neighborhood
 from app.models.property import Property
 from app.models.developer import Developer
-from app import db
+from app.utils.public_market_indicators import GASTAT_REPI_Q3_2026
 
 pages_bp = Blueprint('pages', __name__)
 
@@ -73,59 +73,11 @@ def developers():
 
 @pages_bp.route('/statistics')
 def statistics():
-    """صفحة الإحصائيات (بيانات ديناميكية من قاعدة البيانات)"""
-    # 5-year trends (static demo data — matches seed scenario)
-    years = ['2021', '2022', '2023', '2024', '2025']
-    supply_trend = [300, 450, 700, 850, 1200]
-    demand_trend = [250, 480, 680, 950, 1400]
-    avg_price_trend = [3500, 3800, 4200, 5500, 6200]
-
-    # Dynamic stats from database
-    total_properties = Property.query.count()
-    sale_count = Property.query.filter_by(listing_type='sale').count()
-    rent_count = Property.query.filter_by(listing_type='rent').count()
-
-    # Property type distribution (from DB)
-    prop_types_labels = ['فلل', 'شقق', 'أراضي', 'تجاري']
-    prop_types_data = [
-        Property.query.filter_by(property_type='villa').count(),
-        Property.query.filter_by(property_type='apartment').count(),
-        Property.query.filter_by(property_type='land').count(),
-        Property.query.filter_by(property_type='commercial').count(),
-    ]
-
-    # Rent vs Sale (from DB)
-    rent_vs_sale_labels = ['إيجار', 'بيع']
-    rent_vs_sale_data = [rent_count, sale_count]
-
-    # Top ROI Neighborhoods (compute from DB data)
-    top_neighborhoods = Neighborhood.query.order_by(
-        (Neighborhood.avg_rent_per_sqm / db.func.nullif(Neighborhood.land_price_per_sqm, 0) * 100).desc()
-    ).limit(5).all()
-
-    top_roi_labels = [n.name_ar.replace('حي ', '') for n in top_neighborhoods]
-    top_roi_labels_en = [n.name_en for n in top_neighborhoods]
-    top_roi_data = [
-        round((n.avg_rent_per_sqm / n.land_price_per_sqm * 100), 1)
-        if n.land_price_per_sqm > 0 else 0
-        for n in top_neighborhoods
-    ]
-
-    return render_template('pages/statistics.html',
-                           years=years,
-                           supply_trend=supply_trend,
-                           demand_trend=demand_trend,
-                           avg_price_trend=avg_price_trend,
-                           prop_types_labels=prop_types_labels,
-                           prop_types_data=prop_types_data,
-                           rent_vs_sale_labels=rent_vs_sale_labels,
-                           rent_vs_sale_data=rent_vs_sale_data,
-                           top_roi_labels=top_roi_labels,
-                           top_roi_labels_en=top_roi_labels_en,
-                           top_roi_data=top_roi_data,
-                           total_properties=total_properties,
-                           sale_count=sale_count,
-                           rent_count=rent_count)
+    """Show the latest verified public real-estate price index."""
+    return render_template(
+        'pages/statistics.html',
+        indicators=GASTAT_REPI_Q3_2026,
+    )
 
 
 
